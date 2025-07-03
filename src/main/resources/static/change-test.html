@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>变更管理测试 V2</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 6px; }
+        button { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .success { background: #28a745; }
+        .danger { background: #dc3545; }
+        .warning { background: #ffc107; color: #212529; }
+        .result { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        input, textarea { width: 100%; padding: 6px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .change-item { background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 4px solid #007bff; }
+        .status { padding: 2px 6px; border-radius: 10px; font-size: 12px; color: white; }
+        .status-open { background: #007bff; }
+        .status-merged { background: #28a745; }
+        .status-abandoned { background: #dc3545; }
+    </style>
+</head>
+<body>
+<h1>🔄 变更管理测试 V2</h1>
+
+<!-- 用户状态 -->
+<div class="section">
+    <h3>👤 用户状态</h3>
+    <div id="userInfo">未登录</div>
+    <button onclick="smartLogin()">智能登录</button>
+</div>
+
+<!-- 完整流程测试 -->
+<div class="section">
+    <h3>🚀 完整流程测试</h3>
+    <button onclick="runFullTest()" class="success">运行完整测试</button>
+    <button onclick="setupTestData()" class="warning">准备测试数据</button>
+    <button onclick="viewAllData()">查看所有数据</button>
+</div>
+
+<!-- 手动操作 -->
+<div class="section">
+    <h3>🔧 手动操作</h3>
+    <button onclick="createTestProject()">创建测试项目</button>
+    <button onclick="createTestChange()">创建测试变更</button>
+    <button onclick="getAllChanges()">获取变更列表</button>
+</div>
+
+<!-- 变更列表 -->
+<div class="section">
+    <h3>📋 变更列表</h3>
+    <div id="changesList">点击上方按钮加载数据</div>
+</div>
+
+<!-- 日志 -->
+<div class="section">
+    <h3>📊 操作日志</h3>
+    <button onclick="clearLog()">清空日志</button>
+    <div id="log" class="result" style="height: 200px;"></div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080/api';
+    let token = localStorage.getItem('userToken');
+    let user = null;
+
+    function log(msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(msg);
+    }
+
+    function clearLog() {
+        document.getElementById('log').textContent = '';
+    }
+
+    // 智能登录：先尝试登录，失败则注册后登录
+    async function smartLogin() {
+        try {
+            log('开始智能登录...');
+
+            // 1. 尝试登录现有用户
+            let res = await fetch(`${API}/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usernameOrEmail: 'testuser1', password: '123456' })
+            });
+            let data = await res.json();
+
+            if (data.success) {
+                token = data.data.token;
+                user = data.data;
+                localStorage.setItem('userToken', token);
+                document.getElementById('userInfo').textContent = `${user.displayName} - ${token}`;
+                log('✅ 登录成功');
+                return true;
+            }
+
+            // 2. 登录失败，尝试注册
+            log('用户不存在，注册新用户...');
+            res = await fetch(`${API}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: 'testuser1',
+                    email: 'test1@example.com',
+                    password: '123456',
+                    displayName: '测试用户1'
+                })
+            });
+            data = await res.json();
+
+            if (!data.success) {
+                log('❌ 注册失败: ' + data.error);
+                return false;
+            }
+
+            log('✅ 注册成功，现在登录...');
+
+            // 3. 注册成功后登录
+            res = await fetch(`${API}/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usernameOrEmail: 'testuser1', password: '123456' })
+            });
+            data = await res.json();
+
+            if (data.success) {
+                token = data.data.token;
+                user = data.data;
+                localStorage.setItem('userToken', token);
+                document.getElementById('userInfo').textContent = `${user.displayName} - ${token}`;
+                log('✅ 登录成功');
+                return true;
+            } else {
+                log('❌ 注册后登录失败: ' + data.error);
+                return false;
+            }
+        } catch (e) {
+            log('❌ 登录过程出错: ' + e.message);
+            return false;
+        }
+    }
+
+    // 创建测试项目
+    async function createTestProject() {
+        if (!token) {
+            log('❌ 请先登录');
+            return false;
+        }
+
+        try {
+            log('创建测试项目...');
+            const res = await fetch(`${API}/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'my-test-project',
+                    description: '变更管理测试项目',
+                    gitPath: 'https://github.com/octocat/Hello-World.git',
+                    token: token
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                log('✅ 测试项目创建成功');
+                return true;
+            } else {
+                if (data.error.includes('已存在')) {
+                    log('✅ 测试项目已存在');
+                    return true;
+                } else {
+                    log('❌ 项目创建失败: ' + data.error);
+                    return false;
+                }
+            }
+        } catch (e) {
+            log('❌ 创建项目出错: ' + e.message);
+            return false;
+        }
+    }
+
+    // 创建测试变更
+    async function createTestChange() {
+        if (!token) {
+            log('❌ 请先登录');
+            return false;
+        }
+
+        try {
+            const commitId = 'test' + Math.random().toString(36).substr(2, 6);
+            log(`创建测试变更 (${commitId})...`);
+
+            const res = await fetch(`${API}/changes/manual`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectName: 'my-test-project',
+                    branch: 'main',
+                    commitId: commitId,
+                    commitMessage: '测试变更\n\n- 这是一个测试变更\n- 用于验证系统功能',
+                    authorName: '测试开发者',
+                    authorEmail: 'test@example.com',
+                    token: token
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                log('✅ 测试变更创建成功: ' + data.data.changeId);
+                return data.data;
+            } else {
+                log('❌ 变更创建失败: ' + data.error);
+                return false;
+            }
+        } catch (e) {
+            log('❌ 创建变更出错: ' + e.message);
+            return false;
+        }
+    }
+
+    // 获取所有变更
+    async function getAllChanges() {
+        try {
+            log('获取变更列表...');
+            const res = await fetch(`${API}/changes`);
+            const data = await res.json();
+
+            if (data.success) {
+                log(`✅ 获取到 ${data.count} 个变更`);
+                displayChanges(data.changes);
+                return data.changes;
+            } else {
+                log('❌ 获取变更失败: ' + data.error);
+                return [];
+            }
+        } catch (e) {
+            log('❌ 获取变更出错: ' + e.message);
+            return [];
+        }
+    }
+
+    // 显示变更列表
+    function displayChanges(changes) {
+        const div = document.getElementById('changesList');
+        if (!changes || changes.length === 0) {
+            div.innerHTML = '<p style="color: #666;">暂无变更数据</p>';
+            return;
+        }
+
+        div.innerHTML = `<h4>变更列表 (${changes.length}个)</h4>` +
+            changes.map(c => `
+                    <div class="change-item">
+                        <strong>${c.subject}</strong>
+                        <span class="status status-${c.status.toLowerCase()}">${c.status}</span>
+                        <br>
+                        <small>ID: ${c.changeId} | 项目: ${c.projectName} | 作者: ${c.authorName}</small>
+                        <br>
+                        <small>📁 ${c.filesChanged} 文件 | ➕ ${c.insertions} | ➖ ${c.deletions} | 时间: ${new Date(c.createdAt).toLocaleString()}</small>
+                        ${c.status === 'OPEN' ? `<br>
+                            <button onclick="mergeChange('${c.changeId}')" class="success">合并</button>
+                            <button onclick="abandonChange('${c.changeId}')" class="danger">废弃</button>` : ''}
+                    </div>
+                `).join('');
+    }
+
+    // 合并变更
+    async function mergeChange(id) {
+        try {
+            log(`合并变更: ${id}`);
+            const res = await fetch(`${API}/changes/${id}/merge`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                log('✅ 合并成功');
+                getAllChanges();
+            } else {
+                log('❌ 合并失败: ' + data.error);
+            }
+        } catch (e) {
+            log('❌ 合并出错: ' + e.message);
+        }
+    }
+
+    // 废弃变更
+    async function abandonChange(id) {
+        try {
+            log(`废弃变更: ${id}`);
+            const res = await fetch(`${API}/changes/${id}/abandon`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: '测试废弃' })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                log('✅ 废弃成功');
+                getAllChanges();
+            } else {
+                log('❌ 废弃失败: ' + data.error);
+            }
+        } catch (e) {
+            log('❌ 废弃出错: ' + e.message);
+        }
+    }
+
+    // 准备测试数据
+    async function setupTestData() {
+        log('🔧 开始准备测试数据...');
+
+        // 1. 确保用户登录
+        if (!token) {
+            const loginSuccess = await smartLogin();
+            if (!loginSuccess) {
+                log('❌ 登录失败，无法继续');
+                return;
+            }
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        // 2. 创建测试项目
+        const projectSuccess = await createTestProject();
+        if (!projectSuccess) {
+            log('❌ 项目创建失败，无法继续');
+            return;
+        }
+        await new Promise(r => setTimeout(r, 500));
+
+        // 3. 创建多个测试变更
+        const changeTypes = [
+            { type: 'fix', msg: '修复登录问题\n\n- 修复密码验证逻辑\n- 添加错误处理' },
+            { type: 'feat', msg: '添加新功能\n\n- 添加用户管理界面\n- 实现权限控制' },
+            { type: 'docs', msg: '更新文档\n\n- 更新API文档\n- 添加使用示例' }
+        ];
+
+        for (let i = 0; i < changeTypes.length; i++) {
+            const changeType = changeTypes[i];
+            const commitId = `${changeType.type}${Date.now()}${i}`;
+
+            try {
+                const res = await fetch(`${API}/changes/manual`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        projectName: 'my-test-project',
+                        branch: 'main',
+                        commitId: commitId,
+                        commitMessage: changeType.msg,
+                        authorName: `开发者${i+1}`,
+                        authorEmail: `dev${i+1}@example.com`,
+                        token: token
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    log(`✅ 创建变更成功: ${commitId}`);
+                } else {
+                    log(`❌ 创建变更失败: ${data.error}`);
+                }
+            } catch (e) {
+                log(`❌ 创建变更出错: ${e.message}`);
+            }
+
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        log('✅ 测试数据准备完成！');
+        getAllChanges();
+    }
+
+    // 查看所有数据
+    async function viewAllData() {
+        log('📊 查看所有数据...');
+        await getAllChanges();
+    }
+
+    // 运行完整测试
+    async function runFullTest() {
+        log('🚀 开始运行完整测试流程...');
+
+        // 1. 准备测试数据
+        await setupTestData();
+        await new Promise(r => setTimeout(r, 1000));
+
+        // 2. 获取并显示变更列表
+        const changes = await getAllChanges();
+
+        // 3. 测试状态变更（如果有开放的变更）
+        const openChanges = changes.filter(c => c.status === 'OPEN');
+        if (openChanges.length > 0) {
+            log('测试变更状态操作...');
+
+            // 合并第一个变更
+            await mergeChange(openChanges[0].changeId);
+            await new Promise(r => setTimeout(r, 500));
+
+            // 如果有第二个，则废弃它
+            if (openChanges.length > 1) {
+                await abandonChange(openChanges[1].changeId);
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            // 刷新显示
+            await getAllChanges();
+        }
+
+        log('🎉 完整测试流程完成！');
+    }
+
+    // 页面加载时检查登录状态
+    window.onload = async function() {
+        log('📄 页面加载完成');
+
+        if (token) {
+            try {
+                const res = await fetch(`${API}/users/me?token=${token}`);
+                const data = await res.json();
+                if (data.success) {
+                    user = data.data;
+                    document.getElementById('userInfo').textContent = `${user.displayName} - ${token}`;
+                    log('✅ 自动恢复登录状态');
+                } else {
+                    token = null;
+                    localStorage.removeItem('userToken');
+                    log('❌ 登录状态已失效');
+                }
+            } catch (e) {
+                log('❌ 检查登录状态失败');
+            }
+        }
+    };
+</script>
+</body>
+</html>

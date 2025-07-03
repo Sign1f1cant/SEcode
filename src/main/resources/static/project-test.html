@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>项目管理测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #666; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 60px;
+            resize: vertical;
+        }
+
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover {
+            background: #218838;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            white-space: pre-wrap;
+            font-family: monospace;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .projects-list {
+            margin-top: 20px;
+        }
+        .project-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .project-name {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 16px;
+        }
+        .project-description {
+            color: #666;
+            margin: 5px 0;
+        }
+        .project-path {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .project-actions {
+            margin-top: 10px;
+        }
+        .project-actions button {
+            margin: 2px;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🚀 简化版代码审查系统 - 项目管理</h1>
+
+    <!-- 创建项目 -->
+    <div class="section">
+        <h2>📁 创建新项目</h2>
+        <div class="form-group">
+            <label for="projectName">项目名称 *</label>
+            <input type="text" id="projectName" placeholder="例如: my-awesome-project">
+        </div>
+        <div class="form-group">
+            <label for="projectDescription">项目描述</label>
+            <textarea id="projectDescription" placeholder="项目的详细描述..."></textarea>
+        </div>
+        <div class="form-group">
+            <label for="projectGitPath">Git仓库路径 *</label>
+            <input type="text" id="projectGitPath" placeholder="例如: D:/projects/my-repo 或 /path/to/repo">
+        </div>
+        <button onclick="createProject()" class="success">创建项目</button>
+    </div>
+
+    <!-- 项目操作 -->
+    <div class="section">
+        <h2>🔧 项目操作</h2>
+        <button onclick="getAllProjects()">📋 获取所有项目</button>
+        <button onclick="refreshProjects()" class="success">🔄 刷新项目列表</button>
+
+        <div style="margin-top: 15px;">
+            <input type="text" id="searchProjectName" placeholder="输入项目名称查询详情..." style="width: 300px; display: inline-block;">
+            <button onclick="getProjectDetails()">🔍 查询项目详情</button>
+            <button onclick="getProjectBranches()">🌲 获取分支列表</button>
+        </div>
+    </div>
+
+    <!-- 项目列表 -->
+    <div class="section">
+        <h2>📝 项目列表</h2>
+        <div id="projectsList"></div>
+    </div>
+
+    <!-- 结果显示 -->
+    <div class="section">
+        <h2>📊 操作结果</h2>
+        <button onclick="clearResult()">清空结果</button>
+        <div id="result"></div>
+    </div>
+</div>
+
+<script>
+    const baseUrl = 'http://localhost:8080/api';
+
+    function showResult(data) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+        resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
+
+    function clearResult() {
+        document.getElementById('result').textContent = '';
+    }
+
+    async function createProject() {
+        const name = document.getElementById('projectName').value.trim();
+        const description = document.getElementById('projectDescription').value.trim();
+        const gitPath = document.getElementById('projectGitPath').value.trim();
+
+        if (!name) {
+            alert('请输入项目名称');
+            return;
+        }
+
+        if (!gitPath) {
+            alert('请输入Git仓库路径');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/projects`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description || '无描述',
+                    gitPath: gitPath
+                })
+            });
+
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                // 清空表单
+                document.getElementById('projectName').value = '';
+                document.getElementById('projectDescription').value = '';
+                document.getElementById('projectGitPath').value = '';
+
+                // 刷新项目列表
+                refreshProjects();
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    async function getAllProjects() {
+        try {
+            const response = await fetch(`${baseUrl}/projects`);
+            const data = await response.json();
+            showResult(data);
+            updateProjectsList(data.projects || []);
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    async function refreshProjects() {
+        await getAllProjects();
+    }
+
+    async function getProjectDetails() {
+        const projectName = document.getElementById('searchProjectName').value.trim();
+        if (!projectName) {
+            alert('请输入项目名称');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/projects/${encodeURIComponent(projectName)}`);
+            const data = await response.json();
+            showResult(data);
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    async function getProjectBranches() {
+        const projectName = document.getElementById('searchProjectName').value.trim();
+        if (!projectName) {
+            alert('请输入项目名称');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/projects/${encodeURIComponent(projectName)}/branches`);
+            const data = await response.json();
+            showResult(data);
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    async function deleteProject(projectName) {
+        if (!confirm(`确定要删除项目 "${projectName}" 吗？`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/projects/${encodeURIComponent(projectName)}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                refreshProjects();
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    async function viewProjectBranches(projectName) {
+        try {
+            const response = await fetch(`${baseUrl}/projects/${encodeURIComponent(projectName)}/branches`);
+            const data = await response.json();
+            showResult(data);
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    function updateProjectsList(projects) {
+        const listDiv = document.getElementById('projectsList');
+
+        if (!projects || projects.length === 0) {
+            listDiv.innerHTML = '<p style="color: #666; text-align: center;">暂无项目</p>';
+            return;
+        }
+
+        listDiv.innerHTML = projects.map(project => `
+                <div class="project-item">
+                    <div class="project-name">${project.name}</div>
+                    <div class="project-description">${project.description || '无描述'}</div>
+                    <div class="project-path">📁 ${project.gitPath}</div>
+                    <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                        默认分支: ${project.defaultBranch || 'main'} |
+                        创建时间: ${new Date(project.createdAt).toLocaleString()}
+                    </div>
+                    <div class="project-actions">
+                        <button onclick="viewProjectBranches('${project.name}')" class="success">查看分支</button>
+                        <button onclick="deleteProject('${project.name}')" class="danger">删除项目</button>
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    // 页面加载时自动获取项目列表
+    window.onload = function() {
+        getAllProjects();
+    };
+</script>
+</body>
+</html>

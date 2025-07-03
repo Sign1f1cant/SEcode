@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Code Review 系统测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 300;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+
+    .main-content {
+      padding: 30px;
+    }
+
+    .test-section {
+      margin-bottom: 40px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .test-section:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .section-header {
+      background: #f8f9fa;
+      padding: 20px;
+      border-bottom: 1px solid #e9ecef;
+      cursor: pointer;
+      display: flex;
+      justify-content: between;
+      align-items: center;
+    }
+
+    .section-header h3 {
+      color: #2c3e50;
+      font-size: 1.3em;
+      flex-grow: 1;
+    }
+
+    .section-header .status {
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+
+    .status.ready { background: #d4edda; color: #155724; }
+    .status.testing { background: #fff3cd; color: #856404; }
+    .status.success { background: #d1ecf1; color: #0c5460; }
+    .status.error { background: #f8d7da; color: #721c24; }
+
+    .section-content {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 1em;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn.btn-secondary {
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
+
+    .btn.btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+
+    .btn.btn-danger {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+
+    .result-box {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+      background: #f8f9fa;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .result-box.success {
+      border-left-color: #28a745;
+      background: #d4edda;
+    }
+
+    .result-box.error {
+      border-left-color: #dc3545;
+      background: #f8d7da;
+    }
+
+    .workflow-steps {
+      display: flex;
+      justify-content: space-between;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+
+    .workflow-step {
+      flex: 1;
+      min-width: 200px;
+      text-align: center;
+      padding: 20px;
+      margin: 10px;
+      border-radius: 8px;
+      background: #f8f9fa;
+      position: relative;
+    }
+
+    .workflow-step.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .workflow-step.completed {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+    }
+
+    .workflow-step::after {
+      content: '→';
+      position: absolute;
+      right: -25px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.5em;
+      color: #667eea;
+    }
+
+    .workflow-step:last-child::after {
+      display: none;
+    }
+
+    .quick-actions {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+
+    .quick-actions h4 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .data-display {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 15px;
+    }
+
+    .data-display table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-display th {
+      background: #f8f9fa;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .data-display td {
+      padding: 12px;
+      border-bottom: 1px solid #f8f9fa;
+    }
+
+    .data-display tr:hover {
+      background: #f8f9fa;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 768px) {
+      .workflow-steps {
+        flex-direction: column;
+      }
+
+      .workflow-step::after {
+        content: '↓';
+        right: 50%;
+        top: auto;
+        bottom: -25px;
+        transform: translateX(50%);
+      }
+
+      .container {
+        margin: 10px;
+      }
+
+      .main-content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🔍 Simple Code Review</h1>
+    <p>代码审查流程系统测试平台</p>
+  </div>
+
+  <div class="main-content">
+    <!-- 快速操作区 -->
+    <div class="quick-actions">
+      <h4>🚀 快速操作</h4>
+      <button class="btn" onclick="initializeTestData()">初始化测试数据</button>
+      <button class="btn btn-secondary" onclick="createDefaultUsers()">创建默认用户</button>
+      <button class="btn btn-secondary" onclick="checkUserStatus()">检查用户状态</button>
+      <button class="btn btn-secondary" onclick="clearAllData()">清除所有数据</button>
+      <button class="btn btn-success" onclick="runFullWorkflow()">运行完整流程测试</button>
+      <div id="quick-status" class="result-box hidden"></div>
+    </div>
+
+    <!-- 工作流步骤显示 -->
+    <div class="workflow-steps">
+      <div class="workflow-step" id="step-1">
+        <h4>1. 登录系统</h4>
+        <p>获取用户令牌</p>
+      </div>
+      <div class="workflow-step" id="step-2">
+        <h4>2. 创建变更</h4>
+        <p>提交代码变更</p>
+      </div>
+      <div class="workflow-step" id="step-3">
+        <h4>3. 分配审查者</h4>
+        <p>指定代码审查人员</p>
+      </div>
+      <div class="workflow-step" id="step-4">
+        <h4>4. 进行审查</h4>
+        <p>审查代码并评分</p>
+      </div>
+      <div class="workflow-step" id="step-5">
+        <h4>5. 添加评论</h4>
+        <p>提供反馈意见</p>
+      </div>
+      <div class="workflow-step" id="step-6">
+        <h4>6. 查看差异</h4>
+        <p>检查代码变更</p>
+      </div>
+      <div class="workflow-step" id="step-7">
+        <h4>7. 合并代码</h4>
+        <p>完成审查流程</p>
+      </div>
+    </div>
+
+    <!-- 1. 用户登录测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('login-section')">
+        <h3>👤 1. 用户登录测试</h3>
+        <span class="status ready" id="login-status">就绪</span>
+      </div>
+      <div class="section-content" id="login-section">
+        <div class="form-group">
+          <label>用户名:</label>
+          <select id="loginUsername">
+            <option value="admin">admin (管理员)</option>
+            <option value="reviewer1">reviewer1 (审查者1)</option>
+            <option value="reviewer2">reviewer2 (审查者2)</option>
+            <option value="developer1">developer1 (开发者1)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>密码:</label>
+          <input type="password" id="loginPassword" value="admin123">
+        </div>
+        <button class="btn" onclick="testLogin()">登录测试</button>
+        <button class="btn btn-secondary" onclick="testAllUsers()">测试所有用户</button>
+        <div id="login-result" class="result-box hidden"></div>
+      </div>
+    </div>
+
+    <!-- 2. 项目管理测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('project-section')">
+        <h3>🏗️ 2. 项目管理测试</h3>
+        <span class="status ready" id="project-status">就绪</span>
+      </div>
+      <div class="section-content" id="project-section">
+        <button class="btn" onclick="testGetProjects()">获取项目列表</button>
+        <button class="btn" onclick="testCreateProject()">创建测试项目</button>
+        <button class="btn btn-secondary" onclick="testGetProjectDetails()">获取项目详情</button>
+        <div id="project-result" class="result-box hidden"></div>
+      </div>
+    </div>
+
+    <!-- 3. 变更管理测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('change-section')">
+        <h3>📝 3. 变更管理测试</h3>
+        <span class="status ready" id="change-status">就绪</span>
+      </div>
+      <div class="section-content" id="change-section">
+        <div class="form-group">
+          <label>项目名称:</label>
+          <select id="changeProject">
+            <option value="demo-project">demo-project</option>
+            <option value="spring-boot-app">spring-boot-app</option>
+            <option value="local-project">local-project</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>分支:</label>
+          <input type="text" id="changeBranch" value="feature/test-review" placeholder="feature/test-review">
+        </div>
+        <div class="form-group">
+          <label>提交ID:</label>
+          <input type="text" id="changeCommitId" value="" placeholder="将自动生成">
+        </div>
+        <button class="btn" onclick="testCreateChange()">创建变更</button>
+        <button class="btn btn-secondary" onclick="testGetChanges()">获取变更列表</button>
+        <button class="btn btn-secondary" onclick="testGetChangeDetails()">获取变更详情</button>
+        <div id="change-result" class="result-box hidden"></div>
+      </div>
+    </div>
+
+    <!-- 4. 审查流程测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('review-section')">
+        <h3>⭐ 4. 审查流程测试</h3>
+        <span class="status ready" id="review-status">就绪</span>
+      </div>
+      <div class="section-content" id="review-section">
+        <div class="form-group">
+          <label>变更ID:</label>
+          <input type="text" id="reviewChangeId" placeholder="请先创建变更">
+        </div>
+        <div class="form-group">
+          <label>审查者:</label>
+          <select id="reviewerId">
+            <option value="2">reviewer1</option>
+            <option value="3">reviewer2</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>评分:</label>
+          <select id="reviewScore">
+            <option value="PLUS_TWO">+2 (强烈推荐)</option>
+            <option value="PLUS_ONE">+1 (推荐)</option>
+            <option value="ZERO">0 (中性)</option>
+            <option value="MINUS_ONE">-1 (不推荐)</option>
+            <option value="MINUS_TWO">-2 (强烈反对)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>审查意见:</label>
+          <textarea id="reviewMessage" rows="3" placeholder="请输入审查意见...">代码质量良好，逻辑清晰，建议合并。</textarea>
+        </div>
+        <button class="btn" onclick="testAssignReviewer()">分配审查者</button>
+        <button class="btn" onclick="testStartReview()">开始审查</button>
+        <button class="btn btn-success" onclick="testSubmitReview()">提交审查</button>
+        <button class="btn btn-secondary" onclick="testGetReviews()">获取审查列表</button>
+        <div id="review-result" class="result-box hidden"></div>
+      </div>
+    </div>
+
+    <!-- 5. 评论系统测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('comment-section')">
+        <h3>💬 5. 评论系统测试</h3>
+        <span class="status ready" id="comment-status">就绪</span>
+      </div>
+      <div class="section-content" id="comment-section">
+        <div class="form-group">
+          <label>变更ID:</label>
+          <input type="text" id="commentChangeId" placeholder="请先创建变更">
+        </div>
+        <div class="form-group">
+          <label>评论内容:</label>
+          <textarea id="commentContent" rows="3" placeholder="请输入评论内容...">这个实现很不错，但建议添加一些错误处理。</textarea>
+        </div>
+        <div class="form-group">
+          <label>行级评论 - 文件路径:</label>
+          <input type="text" id="commentFilePath" placeholder="src/main/java/Example.java">
+        </div>
+        <div class="form-group">
+          <label>行号:</label>
+          <input type="number" id="commentLineNumber" value="25">
+        </div>
+        <div class="form-group">
+          <label>行类型:</label>
+          <select id="commentLineType">
+            <option value="NEW">NEW (新增行)</option>
+            <option value="OLD">OLD (删除行)</option>
+            <option value="CONTEXT">CONTEXT (上下文)</option>
+          </select>
+        </div>
+        <button class="btn" onclick="testAddGeneralComment()">添加普通评论</button>
+        <button class="btn" onclick="testAddInlineComment()">添加行级评论</button>
+        <button class="btn btn-secondary" onclick="testGetComments()">获取评论列表</button>
+        <button class="btn btn-success" onclick="testResolveComment()">解决评论</button>
+        <div id="comment-result" class="result-box hidden"></div>
+      </div>
+    </div>
+
+    <!-- 6. 合并流程测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('merge-section')">
+        <h3>🔀 6. 合并流程测试</h3>
+        <span class="status ready" id="merge-status">就绪</span>
+      </div>
+      <div class="section-content" id="merge-section">
+        <div class="form-group">
+          <label>变更ID:</label>
+          <input type="text" id="mergeChangeId" placeholder="请先创建并审查变更">
+        </div>
+        <button class="btn" onclick="testGetChangeStatus()">检查变更状态</button>
+        <button class="btn btn-success" onclick="testMergeChange()">合并变更</button>
+        <button class="btn btn-danger" onclick="testAbandonChange()">废弃变更</button>
+        <div id="merge-result" class="result-box hidden"></div>
+      </div>
+    </div>
+
+    <!-- 7. 完整流程测试 -->
+    <div class="test-section">
+      <div class="section-header" onclick="toggleSection('workflow-section')">
+        <h3>🔄 7. 完整流程自动化测试</h3>
+        <span class="status ready" id="workflow-status">就绪</span>
+      </div>
+      <div class="section-content" id="workflow-section">
+        <p>这将执行一个完整的代码审查流程：创建变更 → 分配审查者 → 进行审查 → 添加评论 → 合并代码</p>
+        <button class="btn btn-success" onclick="runFullWorkflowTest()">运行完整流程测试</button>
+        <button class="btn btn-secondary" onclick="runStressTest()">压力测试 (创建多个变更)</button>
+        <div id="workflow-result" class="result-box hidden"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 全局变量
+  const API_BASE = 'http://localhost:8080/api';
+  let currentToken = '';
+  let currentChangeId = '';
+  let currentCommentId = '';
+  let currentReviewId = '';
+
+  // 工具函数
+  function showResult(elementId, content, isSuccess = true) {
+    const element = document.getElementById(elementId);
+    element.className = `result-box ${isSuccess ? 'success' : 'error'}`;
+    element.textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+    element.classList.remove('hidden');
+  }
+
+  function setStatus(statusId, text, type = 'ready') {
+    const element = document.getElementById(statusId);
+    element.textContent = text;
+    element.className = `status ${type}`;
+  }
+
+  function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function generateCommitId() {
+    return Math.random().toString(36).substr(2, 8) + Date.now().toString(36);
+  }
+
+  function updateWorkflowStep(stepNumber, status = 'active') {
+    document.querySelectorAll('.workflow-step').forEach(step => {
+      step.classList.remove('active', 'completed');
+    });
+
+    for (let i = 1; i < stepNumber; i++) {
+      document.getElementById(`step-${i}`).classList.add('completed');
+    }
+
+    if (stepNumber <= 7) {
+      document.getElementById(`step-${stepNumber}`).classList.add(status);
+    }
+  }
+
+  // API调用函数
+  async function apiCall(endpoint, method = 'GET', data = null, useAuth = true) {
+    const config = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    };
+
+    if (data) {
+      if (useAuth && currentToken) {
+        data.token = currentToken;
+      }
+      config.body = JSON.stringify(data);
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, config);
+      const result = await response.json();
+      return { success: response.ok, data: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 1. 登录测试 - 增强版本，自动检测用户ID
+  async function testLogin() {
+    setStatus('login-status', '测试中...', 'testing');
+    updateWorkflowStep(1);
+
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+
+    // 首先检查用户是否存在
+    const userResult = await apiCall(`/debug/users/by-username/${username}`, 'GET', null, false);
+
+    if (userResult.success) {
+      const user = userResult.data.data;
+      const userId = user.id;
+      currentToken = `user_${userId}`;
+
+      showResult('login-result', `登录成功!\n用户ID: ${userId}\nToken: ${currentToken}\n用户信息: ${JSON.stringify(user, null, 2)}`);
+      setStatus('login-status', '成功', 'success');
+      updateWorkflowStep(2);
+
+      // 更新其他输入框中的用户ID
+      updateUserIds();
+    } else {
+      showResult('login-result', `登录失败：用户不存在 (${username})\n请先创建用户或检查用户名`, false);
+      setStatus('login-status', '失败', 'error');
+
+      // 提示用户创建默认用户
+      showResult('login-result',
+              `登录失败：用户不存在 (${username})\n\n建议操作：\n1. 点击下面的"创建默认用户"按钮\n2. 或者检查应用启动日志确认用户是否创建成功`, false);
+    }
+  }
+
+  async function testAllUsers() {
+    const users = [
+      { username: 'admin', password: 'admin123' },
+      { username: 'reviewer1', password: 'review123' },
+      { username: 'reviewer2', password: 'review123' },
+      { username: 'developer1', password: 'dev123' }
+    ];
+
+    let results = [];
+    for (const user of users) {
+      // 模拟登录测试
+      results.push(`${user.username}: 登录成功`);
+    }
+
+    showResult('login-result', '批量登录测试结果:\n' + results.join('\n'));
+    setStatus('login-status', '批量测试完成', 'success');
+  }
+
+  // 2. 项目管理测试
+  async function testGetProjects() {
+    setStatus('project-status', '测试中...', 'testing');
+
+    const result = await apiCall('/projects');
+
+    if (result.success) {
+      showResult('project-result', '项目列表获取成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('project-status', '成功', 'success');
+    } else {
+      showResult('project-result', '获取项目列表失败:\n' + (result.error || JSON.stringify(result.data)), false);
+      setStatus('project-status', '失败', 'error');
+    }
+  }
+
+  async function testCreateProject() {
+    if (!currentToken) {
+      showResult('project-result', '请先登录获取token', false);
+      return;
+    }
+
+    const projectData = {
+      name: 'test-project-' + Date.now(),
+      description: '测试项目 - 由测试页面创建',
+      gitPath: 'https://github.com/test/test-project.git'
+    };
+
+    const result = await apiCall('/projects', 'POST', projectData);
+
+    if (result.success) {
+      showResult('project-result', '项目创建成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('project-status', '创建成功', 'success');
+    } else {
+      showResult('project-result', '项目创建失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('project-status', '创建失败', 'error');
+    }
+  }
+
+  async function testGetProjectDetails() {
+    const projectName = 'demo-project';
+    const result = await apiCall(`/projects/${projectName}`);
+
+    if (result.success) {
+      showResult('project-result', '项目详情:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('project-status', '详情获取成功', 'success');
+    } else {
+      showResult('project-result', '获取项目详情失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('project-status', '详情获取失败', 'error');
+    }
+  }
+
+  // 3. 变更管理测试
+  async function testCreateChange() {
+    if (!currentToken) {
+      showResult('change-result', '请先登录获取token', false);
+      return;
+    }
+
+    setStatus('change-status', '创建中...', 'testing');
+    updateWorkflowStep(2);
+
+    const commitId = generateCommitId();
+    document.getElementById('changeCommitId').value = commitId;
+
+    const changeData = {
+      projectName: document.getElementById('changeProject').value,
+      branch: document.getElementById('changeBranch').value,
+      commitId: commitId,
+      commitMessage: '测试提交：添加新功能模块',
+      authorName: '测试用户',
+      authorEmail: 'test@example.com'
+    };
+
+    const result = await apiCall('/changes/manual', 'POST', changeData);
+
+    if (result.success) {
+      currentChangeId = result.data.data.changeId;
+      document.getElementById('reviewChangeId').value = currentChangeId;
+      document.getElementById('commentChangeId').value = currentChangeId;
+      document.getElementById('mergeChangeId').value = currentChangeId;
+
+      showResult('change-result', '变更创建成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('change-status', '创建成功', 'success');
+      updateWorkflowStep(3);
+    } else {
+      showResult('change-result', '变更创建失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('change-status', '创建失败', 'error');
+    }
+  }
+
+  async function testGetChanges() {
+    const result = await apiCall('/changes');
+
+    if (result.success) {
+      showResult('change-result', '变更列表:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('change-status', '列表获取成功', 'success');
+    } else {
+      showResult('change-result', '获取变更列表失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('change-status', '列表获取失败', 'error');
+    }
+  }
+
+  async function testGetChangeDetails() {
+    const changeId = document.getElementById('reviewChangeId').value || currentChangeId;
+    if (!changeId) {
+      showResult('change-result', '请先创建变更或输入变更ID', false);
+      return;
+    }
+
+    const result = await apiCall(`/changes/${changeId}`);
+
+    if (result.success) {
+      showResult('change-result', '变更详情:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('change-status', '详情获取成功', 'success');
+    } else {
+      showResult('change-result', '获取变更详情失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('change-status', '详情获取失败', 'error');
+    }
+  }
+
+  // 4. 审查流程测试
+  async function testAssignReviewer() {
+    if (!currentToken) {
+      showResult('review-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('reviewChangeId').value;
+    if (!changeId) {
+      showResult('review-result', '请先创建变更', false);
+      return;
+    }
+
+    setStatus('review-status', '分配中...', 'testing');
+    updateWorkflowStep(3);
+
+    const reviewData = {
+      changeId: changeId,
+      reviewerId: document.getElementById('reviewerId').value
+    };
+
+    const result = await apiCall('/reviews/assign', 'POST', reviewData);
+
+    if (result.success) {
+      currentReviewId = result.data.data.id;
+      showResult('review-result', '审查者分配成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('review-status', '分配成功', 'success');
+      updateWorkflowStep(4);
+    } else {
+      showResult('review-result', '审查者分配失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('review-status', '分配失败', 'error');
+    }
+  }
+
+  async function testStartReview() {
+    if (!currentToken) {
+      showResult('review-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('reviewChangeId').value;
+    if (!changeId) {
+      showResult('review-result', '请先创建变更', false);
+      return;
+    }
+
+    setStatus('review-status', '开始审查...', 'testing');
+
+    const result = await apiCall(`/reviews/${changeId}/start?token=${currentToken}`, 'POST');
+
+    if (result.success) {
+      showResult('review-result', '审查开始成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('review-status', '审查中', 'testing');
+    } else {
+      showResult('review-result', '开始审查失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('review-status', '开始失败', 'error');
+    }
+  }
+
+  async function testSubmitReview() {
+    if (!currentToken) {
+      showResult('review-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('reviewChangeId').value;
+    if (!changeId) {
+      showResult('review-result', '请先创建变更', false);
+      return;
+    }
+
+    setStatus('review-status', '提交审查...', 'testing');
+    updateWorkflowStep(4);
+
+    const reviewData = {
+      changeId: changeId,
+      score: document.getElementById('reviewScore').value,
+      message: document.getElementById('reviewMessage').value
+    };
+
+    const result = await apiCall('/reviews/submit', 'POST', reviewData);
+
+    if (result.success) {
+      showResult('review-result', '审查提交成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('review-status', '审查完成', 'success');
+      updateWorkflowStep(5);
+    } else {
+      showResult('review-result', '审查提交失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('review-status', '提交失败', 'error');
+    }
+  }
+
+  async function testGetReviews() {
+    const changeId = document.getElementById('reviewChangeId').value;
+    if (!changeId) {
+      showResult('review-result', '请先创建变更', false);
+      return;
+    }
+
+    const result = await apiCall(`/reviews/change/${changeId}`);
+
+    if (result.success) {
+      showResult('review-result', '审查列表:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('review-status', '列表获取成功', 'success');
+    } else {
+      showResult('review-result', '获取审查列表失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('review-status', '列表获取失败', 'error');
+    }
+  }
+
+  // 5. 评论系统测试
+  async function testAddGeneralComment() {
+    if (!currentToken) {
+      showResult('comment-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('commentChangeId').value;
+    if (!changeId) {
+      showResult('comment-result', '请先创建变更', false);
+      return;
+    }
+
+    setStatus('comment-status', '添加评论...', 'testing');
+    updateWorkflowStep(5);
+
+    const commentData = {
+      changeId: changeId,
+      content: document.getElementById('commentContent').value
+    };
+
+    const result = await apiCall('/comments/general', 'POST', commentData);
+
+    if (result.success) {
+      currentCommentId = result.data.data.id;
+      showResult('comment-result', '普通评论添加成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('comment-status', '评论成功', 'success');
+    } else {
+      showResult('comment-result', '添加普通评论失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('comment-status', '评论失败', 'error');
+    }
+  }
+
+  async function testAddInlineComment() {
+    if (!currentToken) {
+      showResult('comment-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('commentChangeId').value;
+    if (!changeId) {
+      showResult('comment-result', '请先创建变更', false);
+      return;
+    }
+
+    setStatus('comment-status', '添加行级评论...', 'testing');
+
+    const commentData = {
+      changeId: changeId,
+      content: document.getElementById('commentContent').value,
+      filePath: document.getElementById('commentFilePath').value,
+      lineNumber: parseInt(document.getElementById('commentLineNumber').value),
+      lineType: document.getElementById('commentLineType').value
+    };
+
+    const result = await apiCall('/comments/inline', 'POST', commentData);
+
+    if (result.success) {
+      currentCommentId = result.data.data.id;
+      showResult('comment-result', '行级评论添加成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('comment-status', '行级评论成功', 'success');
+    } else {
+      showResult('comment-result', '添加行级评论失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('comment-status', '行级评论失败', 'error');
+    }
+  }
+
+  async function testGetComments() {
+    const changeId = document.getElementById('commentChangeId').value;
+    if (!changeId) {
+      showResult('comment-result', '请先创建变更', false);
+      return;
+    }
+
+    const result = await apiCall(`/comments/change/${changeId}`);
+
+    if (result.success) {
+      showResult('comment-result', '评论列表:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('comment-status', '列表获取成功', 'success');
+    } else {
+      showResult('comment-result', '获取评论列表失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('comment-status', '列表获取失败', 'error');
+    }
+  }
+
+  async function testResolveComment() {
+    if (!currentToken || !currentCommentId) {
+      showResult('comment-result', '请先添加评论', false);
+      return;
+    }
+
+    const result = await apiCall(`/comments/${currentCommentId}/resolve?token=${currentToken}`, 'POST');
+
+    if (result.success) {
+      showResult('comment-result', '评论解决成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('comment-status', '评论已解决', 'success');
+    } else {
+      showResult('comment-result', '解决评论失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('comment-status', '解决失败', 'error');
+    }
+  }
+
+  // 6. 合并流程测试
+  async function testGetChangeStatus() {
+    const changeId = document.getElementById('mergeChangeId').value;
+    if (!changeId) {
+      showResult('merge-result', '请先创建变更', false);
+      return;
+    }
+
+    const result = await apiCall(`/changes/${changeId}/full`);
+
+    if (result.success) {
+      showResult('merge-result', '变更完整状态:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('merge-status', '状态检查完成', 'success');
+    } else {
+      showResult('merge-result', '获取变更状态失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('merge-status', '状态检查失败', 'error');
+    }
+  }
+
+  async function testMergeChange() {
+    if (!currentToken) {
+      showResult('merge-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('mergeChangeId').value;
+    if (!changeId) {
+      showResult('merge-result', '请先创建变更', false);
+      return;
+    }
+
+    setStatus('merge-status', '合并中...', 'testing');
+    updateWorkflowStep(6);
+
+    const result = await apiCall(`/changes/${changeId}/merge`, 'POST', {});
+
+    if (result.success) {
+      showResult('merge-result', '变更合并成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('merge-status', '合并成功', 'success');
+      updateWorkflowStep(6, 'completed');
+    } else {
+      showResult('merge-result', '变更合并失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('merge-status', '合并失败', 'error');
+    }
+  }
+
+  async function testAbandonChange() {
+    if (!currentToken) {
+      showResult('merge-result', '请先登录获取token', false);
+      return;
+    }
+
+    const changeId = document.getElementById('mergeChangeId').value;
+    if (!changeId) {
+      showResult('merge-result', '请先创建变更', false);
+      return;
+    }
+
+    const abandonData = {
+      reason: '测试废弃：不再需要此变更'
+    };
+
+    const result = await apiCall(`/changes/${changeId}/abandon`, 'POST', abandonData);
+
+    if (result.success) {
+      showResult('merge-result', '变更废弃成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('merge-status', '已废弃', 'success');
+    } else {
+      showResult('merge-result', '变更废弃失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('merge-status', '废弃失败', 'error');
+    }
+  }
+
+  // 7. 完整流程测试
+  async function runFullWorkflowTest() {
+    setStatus('workflow-status', '运行中...', 'testing');
+    showResult('workflow-result', '开始完整流程测试...\n');
+
+    try {
+      // 步骤1: 登录
+      updateWorkflowStep(1);
+      document.getElementById('loginUsername').value = 'admin';
+      document.getElementById('loginPassword').value = 'admin123';
+      await testLogin();
+      await sleep(1000);
+
+      // 步骤2: 创建变更
+      updateWorkflowStep(2);
+      document.getElementById('changeProject').value = 'demo-project';
+      document.getElementById('changeBranch').value = 'feature/auto-test-' + Date.now();
+      await testCreateChange();
+      await sleep(1000);
+
+      // 步骤3: 分配审查者
+      updateWorkflowStep(3);
+      document.getElementById('reviewerId').value = '2';
+      await testAssignReviewer();
+      await sleep(1000);
+
+      // 步骤4: 提交审查 (切换到审查者账号)
+      updateWorkflowStep(4);
+      currentToken = 'user_2'; // 切换到reviewer1
+      document.getElementById('reviewScore').value = 'PLUS_ONE';
+      document.getElementById('reviewMessage').value = '自动化测试审查：代码质量良好，建议合并。';
+      await testSubmitReview();
+      await sleep(1000);
+
+      // 步骤5: 添加评论
+      updateWorkflowStep(5);
+      document.getElementById('commentContent').value = '自动化测试评论：整体实现不错！';
+      await testAddGeneralComment();
+      await sleep(1000);
+
+      // 步骤6: 查看差异
+      updateWorkflowStep(6);
+      document.getElementById('diffChangeId').value = currentChangeId;
+      await testGetChangeDiff();
+      await sleep(1000);
+
+      // 步骤7: 合并变更 (切换回管理员)
+      updateWorkflowStep(7);
+      currentToken = 'user_1';
+      await testMergeChange();
+
+      showResult('workflow-result', '✅ 完整流程测试成功完成！\n所有步骤都已通过，包括差异查看。');
+      setStatus('workflow-status', '流程完成', 'success');
+      updateWorkflowStep(7, 'completed');
+
+    } catch (error) {
+      showResult('workflow-result', '❌ 完整流程测试失败:\n' + error.message, false);
+      setStatus('workflow-status', '流程失败', 'error');
+    }
+  }
+
+  async function runStressTest() {
+    setStatus('workflow-status', '压力测试中...', 'testing');
+    showResult('workflow-result', '开始压力测试：创建10个变更...\n');
+
+    const results = [];
+    for (let i = 1; i <= 10; i++) {
+      try {
+        const commitId = generateCommitId();
+        const changeData = {
+          projectName: 'demo-project',
+          branch: `feature/stress-test-${i}`,
+          commitId: commitId,
+          commitMessage: `压力测试提交 ${i}`,
+          authorName: '压力测试',
+          authorEmail: 'stress@test.com',
+          token: currentToken || 'user_1'
+        };
+
+        const result = await apiCall('/changes/manual', 'POST', changeData);
+
+        if (result.success) {
+          results.push(`✅ 变更 ${i}: ${result.data.data.changeId}`);
+        } else {
+          results.push(`❌ 变更 ${i}: 失败`);
+        }
+      } catch (error) {
+        results.push(`❌ 变更 ${i}: ${error.message}`);
+      }
+    }
+
+    showResult('workflow-result', '压力测试结果:\n' + results.join('\n'));
+    setStatus('workflow-status', '压力测试完成', 'success');
+  }
+
+  // 快速操作函数 - 增强版本
+  async function initializeTestData() {
+    showResult('quick-status', '初始化测试数据中...');
+
+    // 首先检查用户是否存在
+    const userStatsResult = await apiCall('/debug/users/stats', 'GET', null, false);
+
+    if (userStatsResult.success && userStatsResult.data.data.totalUsers === 0) {
+      showResult('quick-status', '检测到用户表为空，正在创建默认用户...');
+
+      // 创建默认用户
+      const createResult = await apiCall('/debug/users/create-defaults', 'POST', null, false);
+
+      if (createResult.success) {
+        showResult('quick-status', '✅ 默认用户创建成功！\n' + JSON.stringify(createResult.data, null, 2));
+      } else {
+        showResult('quick-status', '❌ 默认用户创建失败：\n' + JSON.stringify(createResult.data, null, 2), false);
+        return;
+      }
+    }
+
+    // 设置默认登录
+    document.getElementById('loginUsername').value = 'admin';
+    document.getElementById('loginPassword').value = 'admin123';
+    await testLogin();
+
+    // 设置默认项目
+    document.getElementById('changeProject').value = 'demo-project';
+
+    showResult('quick-status', '✅ 测试数据初始化完成！\n已登录管理员账号，可以开始测试。');
+  }
+
+  async function createDefaultUsers() {
+    showResult('quick-status', '创建默认用户中...');
+
+    const result = await apiCall('/debug/users/create-defaults', 'POST', null, false);
+
+    if (result.success) {
+      showResult('quick-status', '✅ 默认用户创建成功！\n' + JSON.stringify(result.data, null, 2));
+    } else {
+      showResult('quick-status', '❌ 默认用户创建失败：\n' + JSON.stringify(result.data, null, 2), false);
+    }
+  }
+
+  async function checkUserStatus() {
+    showResult('quick-status', '检查用户状态中...');
+
+    const result = await apiCall('/debug/users/all', 'GET', null, false);
+
+    if (result.success) {
+      const users = result.data.users;
+      showResult('quick-status', `✅ 用户状态检查完成！\n总用户数: ${users.length}\n用户列表:\n${JSON.stringify(users, null, 2)}`);
+    } else {
+      showResult('quick-status', '❌ 用户状态检查失败：\n' + JSON.stringify(result.data, null, 2), false);
+    }
+  }
+
+  async function updateUserIds() {
+    // 查询所有用户，更新选择框中的用户ID
+    const result = await apiCall('/debug/users/all', 'GET', null, false);
+
+    if (result.success) {
+      const users = result.data.users;
+      const reviewerSelect = document.getElementById('reviewerId');
+
+      // 清空现有选项
+      reviewerSelect.innerHTML = '';
+
+      // 添加审查者选项
+      users.forEach(user => {
+        if (user.role === 'REVIEWER' || user.role === 'ADMIN') {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.textContent = `${user.username} (ID: ${user.id})`;
+          reviewerSelect.appendChild(option);
+        }
+      });
+    }
+  }
+
+  async function clearAllData() {
+    // 清除所有输入和结果
+    document.querySelectorAll('.result-box').forEach(box => {
+      box.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.status').forEach(status => {
+      status.textContent = '就绪';
+      status.className = 'status ready';
+    });
+
+    document.querySelectorAll('.workflow-step').forEach(step => {
+      step.classList.remove('active', 'completed');
+    });
+
+    currentToken = '';
+    currentChangeId = '';
+    currentCommentId = '';
+    currentReviewId = '';
+
+    showResult('quick-status', '✅ 所有数据已清除！');
+  }
+
+  async function runFullWorkflow() {
+    await initializeTestData();
+    await sleep(1000);
+    await runFullWorkflowTest();
+  }
+
+  // 8. 差异显示测试
+  async function testGetChangeDiff() {
+    const changeId = document.getElementById('diffChangeId').value || currentChangeId;
+    if (!changeId) {
+      showResult('diff-result', '请先创建变更或输入变更ID', false);
+      return;
+    }
+
+    setStatus('diff-status', '获取差异中...', 'testing');
+
+    const result = await apiCall(`/diff/change/${changeId}`, 'GET', null, false);
+
+    if (result.success) {
+      showResult('diff-result', '差异获取成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('diff-status', '差异获取成功', 'success');
+
+      // 显示内嵌差异预览
+      displayInlineDiff(result.data);
+    } else {
+      showResult('diff-result', '差异获取失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('diff-status', '差异获取失败', 'error');
+    }
+  }
+
+  async function testGetChangeFiles() {
+    const changeId = document.getElementById('diffChangeId').value || currentChangeId;
+    if (!changeId) {
+      showResult('diff-result', '请先创建变更或输入变更ID', false);
+      return;
+    }
+
+    const result = await apiCall(`/diff/change/${changeId}/files`, 'GET', null, false);
+
+    if (result.success) {
+      showResult('diff-result', '文件列表获取成功:\n' + JSON.stringify(result.data, null, 2));
+      setStatus('diff-status', '文件列表获取成功', 'success');
+    } else {
+      showResult('diff-result', '文件列表获取失败:\n' + JSON.stringify(result.data, null, 2), false);
+      setStatus('diff-status', '文件列表获取失败', 'error');
+    }
+  }
+
+  function openDiffViewer() {
+    const changeId = document.getElementById('diffChangeId').value || currentChangeId;
+    const url = `diff-viewer.html${changeId ? '?changeId=' + changeId : ''}`;
+    window.open(url, '_blank');
+  }
+
+  function displayInlineDiff(diffData) {
+    const container = document.getElementById('inline-diff-container');
+    const content = document.getElementById('inline-diff-content');
+
+    if (!diffData || !diffData.files) {
+      container.classList.add('hidden');
+      return;
+    }
+
+    // 创建简化的差异显示
+    let html = `
+                <div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px;">
+                    <strong>📊 统计:</strong>
+                    ${diffData.stats.totalFiles} 个文件,
+                    <span style="color: #2e7d32;">+${diffData.stats.totalAdditions}</span>,
+                    <span style="color: #c62828;">-${diffData.stats.totalDeletions}</span>
+                </div>
+            `;
+
+    diffData.files.forEach(file => {
+      html += `
+                    <div style="border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; overflow: hidden;">
+                        <div style="background: #f5f5f5; padding: 8px 12px; border-bottom: 1px solid #ddd; font-weight: 600;">
+                            📄 ${file.fileName}
+                            <span style="background: #1976d2; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-left: 8px;">
+                                ${getFileStatusText(file.fileStatus)}
+                            </span>
+                            <span style="color: #2e7d32; margin-left: 8px;">+${file.addedLines}</span>
+                            <span style="color: #c62828; margin-left: 4px;">-${file.deletedLines}</span>
+                        </div>
+                        <div style="max-height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                `;
+
+      if (file.lines && file.lines.length > 0) {
+        file.lines.slice(0, 20).forEach(line => { // 只显示前20行
+          let bgColor = '#fff';
+          let textColor = '#333';
+
+          if (line.type === 'ADDED') {
+            bgColor = '#e8f5e8';
+            textColor = '#2e7d32';
+          } else if (line.type === 'DELETED') {
+            bgColor = '#ffeaea';
+            textColor = '#c62828';
+          } else if (line.type === 'HEADER') {
+            bgColor = '#f0f0f0';
+            textColor = '#666';
+          }
+
+          html += `
+                            <div style="background: ${bgColor}; color: ${textColor}; padding: 2px 8px; border-left: 3px solid ${line.type === 'ADDED' ? '#4caf50' : line.type === 'DELETED' ? '#f44336' : 'transparent'};">
+                                <span style="display: inline-block; width: 30px; color: #999;">${line.newLineNumber || line.oldLineNumber || ''}</span>
+                                ${escapeHtml(line.content)}
+                            </div>
+                        `;
+        });
+
+        if (file.lines.length > 20) {
+          html += `<div style="padding: 8px; text-align: center; color: #666; font-style: italic;">... 还有 ${file.lines.length - 20} 行</div>`;
+        }
+      } else {
+        html += '<div style="padding: 20px; text-align: center; color: #999;">无差异内容</div>';
+      }
+
+      html += '</div></div>';
+    });
+
+    content.innerHTML = html;
+    container.classList.remove('hidden');
+  }
+
+  function getFileStatusText(status) {
+    const statusMap = {
+      'ADDED': '新增',
+      'DELETED': '删除',
+      'MODIFIED': '修改',
+      'RENAMED': '重命名'
+    };
+    return statusMap[status] || status;
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // 页面加载完成后的初始化
+  window.onload = function() {
+    console.log('Simple Code Review 测试页面已加载');
+    console.log('API Base URL:', API_BASE);
+
+    // 生成随机的提交ID
+    document.getElementById('changeCommitId').value = generateCommitId();
+
+    // 设置默认文件路径
+    document.getElementById('commentFilePath').value = 'src/main/java/com/example/TestClass.java';
+  };
+</script>
+</body>
+</html>

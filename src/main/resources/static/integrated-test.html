@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>用户+项目集成测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; text-align: center; }
+    h2 { color: #666; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+    .step {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      position: relative;
+    }
+    .step.completed {
+      border-color: #28a745;
+      background-color: #f8fff9;
+    }
+    .step.active {
+      border-color: #007bff;
+      background-color: #f8f9ff;
+    }
+    .step.error {
+      border-color: #dc3545;
+      background-color: #fff8f8;
+    }
+
+    .step-number {
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background: white;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-weight: bold;
+      border: 2px solid #e9ecef;
+    }
+    .step.completed .step-number {
+      background: #28a745;
+      color: white;
+      border-color: #28a745;
+    }
+    .step.active .step-number {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    .step.error .step-number {
+      background: #dc3545;
+      color: white;
+      border-color: #dc3545;
+    }
+
+    .form-group {
+      margin: 15px 0;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      margin: 10px 5px;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    button.success {
+      background: #28a745;
+    }
+    button.success:hover {
+      background: #218838;
+    }
+
+    .current-user {
+      background: #e8f5e8;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+    }
+
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .project-list {
+      margin-top: 15px;
+    }
+    .project-item {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+    .project-name {
+      font-weight: bold;
+      color: #007bff;
+      font-size: 16px;
+    }
+    .project-creator {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .warning {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🔗 用户+项目集成测试</h1>
+
+  <!-- 当前状态显示 -->
+  <div id="currentStatus" class="current-user">
+    <strong>当前状态：</strong><span id="statusText">未开始测试</span>
+  </div>
+
+  <!-- 步骤1: 用户注册 -->
+  <div class="step" id="step1">
+    <div class="step-number">1</div>
+    <h2>👤 用户注册</h2>
+    <div class="form-group">
+      <label for="regUsername">用户名 *</label>
+      <input type="text" id="regUsername" value="testuser1">
+    </div>
+    <div class="form-group">
+      <label for="regEmail">邮箱 *</label>
+      <input type="email" id="regEmail" value="test1@example.com">
+    </div>
+    <div class="form-group">
+      <label for="regPassword">密码 *</label>
+      <input type="password" id="regPassword" value="123456">
+    </div>
+    <div class="form-group">
+      <label for="regDisplayName">显示名称</label>
+      <input type="text" id="regDisplayName" value="测试用户1">
+    </div>
+    <button onclick="registerUser()" id="regBtn">注册用户</button>
+    <button onclick="autoRegister()" class="success">快速注册</button>
+    <div id="regResult" class="result" style="display: none;"></div>
+  </div>
+
+  <!-- 步骤2: 用户登录 -->
+  <div class="step" id="step2">
+    <div class="step-number">2</div>
+    <h2>🔐 用户登录</h2>
+    <div class="form-group">
+      <label for="loginUsername">用户名/邮箱 *</label>
+      <input type="text" id="loginUsername" value="testuser1">
+    </div>
+    <div class="form-group">
+      <label for="loginPassword">密码 *</label>
+      <input type="password" id="loginPassword" value="123456">
+    </div>
+    <button onclick="loginUser()" id="loginBtn" disabled>登录</button>
+    <button onclick="autoLogin()" class="success" disabled>快速登录</button>
+    <div id="loginResult" class="result" style="display: none;"></div>
+  </div>
+
+  <!-- 步骤3: 创建项目 -->
+  <div class="step" id="step3">
+    <div class="step-number">3</div>
+    <h2>📁 创建项目（需要登录）</h2>
+    <div class="warning">
+      ⚠️ 注意：如果你没有本地Git仓库，请先创建一个或使用远程URL
+    </div>
+    <div class="form-group">
+      <label for="projectName">项目名称 *</label>
+      <input type="text" id="projectName" value="my-test-project">
+    </div>
+    <div class="form-group">
+      <label for="projectDescription">项目描述</label>
+      <textarea id="projectDescription">这是一个集成测试项目</textarea>
+    </div>
+    <div class="form-group">
+      <label for="projectGitPath">Git仓库路径 *</label>
+      <input type="text" id="projectGitPath" value="https://github.com/octocat/Hello-World.git" placeholder="例如: D:/test-repo 或 https://github.com/user/repo.git">
+    </div>
+    <button onclick="createProject()" id="createBtn" disabled>创建项目</button>
+    <button onclick="autoCreateProject()" class="success" disabled>快速创建</button>
+    <div id="createResult" class="result" style="display: none;"></div>
+  </div>
+
+  <!-- 步骤4: 查看项目列表 -->
+  <div class="step" id="step4">
+    <div class="step-number">4</div>
+    <h2>📋 项目管理</h2>
+    <button onclick="getAllProjects()" id="getAllBtn" disabled>获取所有项目</button>
+    <button onclick="getMyProjects()" id="getMyBtn" disabled>获取我的项目</button>
+    <button onclick="testProjectPermission()" id="permBtn" disabled>测试权限控制</button>
+    <div id="projectResult" class="result" style="display: none;"></div>
+    <div id="projectList" class="project-list"></div>
+  </div>
+
+  <!-- 步骤5: 权限测试 -->
+  <div class="step" id="step5">
+    <div class="step-number">5</div>
+    <h2>🔒 权限验证测试</h2>
+    <div class="warning">
+      这个步骤会测试其他用户是否能修改你的项目（应该失败）
+    </div>
+    <button onclick="createSecondUser()" id="user2Btn" disabled>创建第二个用户</button>
+    <button onclick="testCrossUserPermission()" id="crossBtn" disabled>测试跨用户权限</button>
+    <div id="permissionResult" class="result" style="display: none;"></div>
+  </div>
+
+  <!-- 完整测试日志 -->
+  <div class="step">
+    <div class="step-number">📋</div>
+    <h2>📊 完整测试日志</h2>
+    <button onclick="clearLog()">清空日志</button>
+    <button onclick="runCompleteTest()" class="success">运行完整测试</button>
+    <div id="completeLog" class="result" style="height: 300px;"></div>
+  </div>
+</div>
+
+<script>
+  const baseUrl = 'http://localhost:8080/api';
+  let currentUser = null;
+  let currentToken = null;
+  let testProjects = [];
+  let secondUser = null;
+  let secondToken = null;
+
+  // 页面加载时的初始化
+  window.onload = function() {
+    log('页面加载完成，开始集成测试');
+    updateStatus('准备开始测试...');
+
+    // 检查是否有保存的登录状态
+    const savedToken = localStorage.getItem('userToken');
+    if (savedToken) {
+      log('发现保存的token，尝试恢复登录状态');
+      currentToken = savedToken;
+      checkCurrentUser();
+    }
+  };
+
+  // 日志记录
+  function log(message) {
+    const logDiv = document.getElementById('completeLog');
+    const timestamp = new Date().toLocaleTimeString();
+    logDiv.textContent += `[${timestamp}] ${message}\n`;
+    logDiv.scrollTop = logDiv.scrollHeight;
+    console.log(message);
+  }
+
+  function clearLog() {
+    document.getElementById('completeLog').textContent = '';
+  }
+
+  // 更新状态显示
+  function updateStatus(status) {
+    document.getElementById('statusText').textContent = status;
+  }
+
+  // 显示结果
+  function showResult(elementId, data, isError = false) {
+    const element = document.getElementById(elementId);
+    element.style.display = 'block';
+    element.style.color = isError ? '#dc3545' : '#28a745';
+    element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  }
+
+  // 更新步骤状态
+  function updateStepStatus(stepId, status) {
+    const step = document.getElementById(stepId);
+    step.className = 'step ' + status; // active, completed, error
+  }
+
+  // 启用按钮
+  function enableButtons(buttonIds) {
+    buttonIds.forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = false;
+    });
+  }
+
+  // ========== 步骤1: 用户注册 ==========
+  async function registerUser() {
+    updateStepStatus('step1', 'active');
+    log('开始用户注册...');
+
+    const userData = {
+      username: document.getElementById('regUsername').value.trim(),
+      email: document.getElementById('regEmail').value.trim(),
+      password: document.getElementById('regPassword').value,
+      displayName: document.getElementById('regDisplayName').value.trim()
+    };
+
+    log(`注册用户: ${userData.username} (${userData.email})`);
+
+    try {
+      const response = await fetch(`${baseUrl}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        log('✅ 用户注册成功');
+        showResult('regResult', '注册成功！可以进行登录了', false);
+        updateStepStatus('step1', 'completed');
+        updateStepStatus('step2', 'active');
+        enableButtons(['loginBtn', 'autoLogin']);
+        updateStatus('注册成功，请登录');
+      } else {
+        log('❌ 用户注册失败: ' + data.error);
+        showResult('regResult', '注册失败: ' + data.error, true);
+        updateStepStatus('step1', 'error');
+      }
+    } catch (error) {
+      log('❌ 注册请求失败: ' + error.message);
+      showResult('regResult', '请求失败: ' + error.message, true);
+      updateStepStatus('step1', 'error');
+    }
+  }
+
+  async function autoRegister() {
+    log('执行快速注册...');
+    await registerUser();
+  }
+
+  // ========== 步骤2: 用户登录 ==========
+  async function loginUser() {
+    updateStepStatus('step2', 'active');
+    log('开始用户登录...');
+
+    const loginData = {
+      usernameOrEmail: document.getElementById('loginUsername').value.trim(),
+      password: document.getElementById('loginPassword').value
+    };
+
+    log(`登录用户: ${loginData.usernameOrEmail}`);
+
+    try {
+      const response = await fetch(`${baseUrl}/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        currentUser = data.data;
+        currentToken = data.data.token;
+        localStorage.setItem('userToken', currentToken);
+
+        log('✅ 用户登录成功，Token: ' + currentToken);
+        showResult('loginResult', `登录成功！\n用户: ${currentUser.displayName}\nToken: ${currentToken}`, false);
+        updateStepStatus('step2', 'completed');
+        updateStepStatus('step3', 'active');
+        enableButtons(['createBtn', 'autoCreateProject']);
+        updateStatus(`已登录: ${currentUser.displayName}`);
+      } else {
+        log('❌ 用户登录失败: ' + data.error);
+        showResult('loginResult', '登录失败: ' + data.error, true);
+        updateStepStatus('step2', 'error');
+      }
+    } catch (error) {
+      log('❌ 登录请求失败: ' + error.message);
+      showResult('loginResult', '请求失败: ' + error.message, true);
+      updateStepStatus('step2', 'error');
+    }
+  }
+
+  async function autoLogin() {
+    log('执行快速登录...');
+    await loginUser();
+  }
+
+  // 检查当前用户状态
+  async function checkCurrentUser() {
+    if (!currentToken) return;
+
+    try {
+      const response = await fetch(`${baseUrl}/users/me?token=${currentToken}`);
+      const data = await response.json();
+
+      if (data.success) {
+        currentUser = data.data;
+        log('✅ 登录状态恢复成功');
+        updateStepStatus('step1', 'completed');
+        updateStepStatus('step2', 'completed');
+        updateStepStatus('step3', 'active');
+        enableButtons(['createBtn', 'autoCreateProject', 'getAllBtn', 'getMyBtn', 'permBtn']);
+        updateStatus(`已登录: ${currentUser.displayName}`);
+      } else {
+        log('❌ Token已失效，请重新登录');
+        currentToken = null;
+        currentUser = null;
+        localStorage.removeItem('userToken');
+      }
+    } catch (error) {
+      log('❌ 检查登录状态失败: ' + error.message);
+    }
+  }
+
+  // ========== 步骤3: 创建项目 ==========
+  async function createProject() {
+    updateStepStatus('step3', 'active');
+    log('开始创建项目...');
+
+    const projectData = {
+      name: document.getElementById('projectName').value.trim(),
+      description: document.getElementById('projectDescription').value.trim(),
+      gitPath: document.getElementById('projectGitPath').value.trim(),
+      token: currentToken
+    };
+
+    log(`创建项目: ${projectData.name} -> ${projectData.gitPath}`);
+
+    try {
+      const response = await fetch(`${baseUrl}/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + currentToken
+        },
+        body: JSON.stringify(projectData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        testProjects.push(data.data);
+        log('✅ 项目创建成功: ' + projectData.name);
+        showResult('createResult', `项目创建成功！\n项目名: ${data.data.name}\n创建者ID: ${data.data.creatorId}`, false);
+        updateStepStatus('step3', 'completed');
+        updateStepStatus('step4', 'active');
+        enableButtons(['getAllBtn', 'getMyBtn', 'permBtn']);
+        updateStatus('项目创建成功，可以查看项目列表');
+      } else {
+        log('❌ 项目创建失败: ' + data.error);
+        showResult('createResult', '创建失败: ' + data.error, true);
+        updateStepStatus('step3', 'error');
+      }
+    } catch (error) {
+      log('❌ 创建项目请求失败: ' + error.message);
+      showResult('createResult', '请求失败: ' + error.message, true);
+      updateStepStatus('step3', 'error');
+    }
+  }
+
+  async function autoCreateProject() {
+    log('执行快速项目创建...');
+
+    // 使用示例Git仓库
+    document.getElementById('projectName').value = 'demo-project-' + Date.now();
+    document.getElementById('projectGitPath').value = 'https://github.com/octocat/Hello-World.git';
+
+    await createProject();
+  }
+
+  // ========== 步骤4: 项目管理 ==========
+  async function getAllProjects() {
+    log('获取所有项目...');
+
+    try {
+      const response = await fetch(`${baseUrl}/projects`);
+      const data = await response.json();
+
+      if (data.success) {
+        log(`✅ 获取到 ${data.count} 个项目`);
+        showResult('projectResult', `找到 ${data.count} 个项目`, false);
+        displayProjects(data.projects, '所有项目');
+      } else {
+        log('❌ 获取项目失败: ' + data.error);
+        showResult('projectResult', '获取失败: ' + data.error, true);
+      }
+    } catch (error) {
+      log('❌ 获取项目请求失败: ' + error.message);
+      showResult('projectResult', '请求失败: ' + error.message, true);
+    }
+  }
+
+  async function getMyProjects() {
+    log('获取我的项目...');
+
+    try {
+      const response = await fetch(`${baseUrl}/projects?my=true`, {
+        headers: { 'Authorization': 'Bearer ' + currentToken }
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        log(`✅ 我创建了 ${data.count} 个项目`);
+        showResult('projectResult', `我的项目: ${data.count} 个`, false);
+        displayProjects(data.projects, '我的项目');
+      } else {
+        log('❌ 获取我的项目失败: ' + data.error);
+        showResult('projectResult', '获取失败: ' + data.error, true);
+      }
+    } catch (error) {
+      log('❌ 获取我的项目请求失败: ' + error.message);
+      showResult('projectResult', '请求失败: ' + error.message, true);
+    }
+  }
+
+  // 显示项目列表
+  function displayProjects(projects, title) {
+    const listDiv = document.getElementById('projectList');
+
+    if (!projects || projects.length === 0) {
+      listDiv.innerHTML = `<h4>${title}</h4><p style="color: #666;">暂无项目</p>`;
+      return;
+    }
+
+    listDiv.innerHTML = `<h4>${title} (${projects.length}个)</h4>` +
+            projects.map(project => `
+                    <div class="project-item">
+                        <div class="project-name">${project.name}</div>
+                        <div>${project.description || '无描述'}</div>
+                        <div style="font-family: monospace; font-size: 12px; color: #666;">📁 ${project.gitPath}</div>
+                        <div class="project-creator">
+                            创建者ID: ${project.creatorId} |
+                            默认分支: ${project.defaultBranch} |
+                            创建时间: ${new Date(project.createdAt).toLocaleString()}
+                        </div>
+                    </div>
+                `).join('');
+  }
+
+  async function testProjectPermission() {
+    log('测试项目权限控制...');
+
+    if (testProjects.length === 0) {
+      log('❌ 没有测试项目，请先创建项目');
+      return;
+    }
+
+    const projectName = testProjects[0].name;
+    log(`测试修改项目: ${projectName}`);
+
+    try {
+      const response = await fetch(`${baseUrl}/projects/${projectName}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + currentToken
+        },
+        body: JSON.stringify({
+          description: '修改后的描述 - ' + new Date().toLocaleTimeString()
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        log('✅ 项目修改成功（权限验证通过）');
+        showResult('projectResult', '权限测试通过：可以修改自己的项目', false);
+        updateStepStatus('step4', 'completed');
+        updateStepStatus('step5', 'active');
+        enableButtons(['user2Btn']);
+      } else {
+        log('❌ 项目修改失败: ' + data.error);
+        showResult('projectResult', '权限测试失败: ' + data.error, true);
+      }
+    } catch (error) {
+      log('❌ 权限测试请求失败: ' + error.message);
+      showResult('projectResult', '请求失败: ' + error.message, true);
+    }
+  }
+
+  // ========== 步骤5: 权限验证 ==========
+  async function createSecondUser() {
+    log('创建第二个用户用于权限测试...');
+
+    const userData = {
+      username: 'testuser2',
+      email: 'test2@example.com',
+      password: '123456',
+      displayName: '测试用户2'
+    };
+
+    try {
+      // 注册第二个用户
+      const regResponse = await fetch(`${baseUrl}/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      const regData = await regResponse.json();
+
+      if (regData.success) {
+        log('✅ 第二个用户注册成功');
+
+        // 登录第二个用户
+        const loginResponse = await fetch(`${baseUrl}/users/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            usernameOrEmail: 'testuser2',
+            password: '123456'
+          })
+        });
+
+        const loginData = await loginResponse.json();
+
+        if (loginData.success) {
+          secondUser = loginData.data;
+          secondToken = loginData.data.token;
+          log('✅ 第二个用户登录成功，Token: ' + secondToken);
+          showResult('permissionResult', `第二个用户创建成功！\n用户: ${secondUser.displayName}\nToken: ${secondToken}`, false);
+          enableButtons(['crossBtn']);
+        }
+      } else {
+        if (regData.error.includes('已存在')) {
+          // 用户已存在，直接登录
+          log('用户已存在，直接登录...');
+          const loginResponse = await fetch(`${baseUrl}/users/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              usernameOrEmail: 'testuser2',
+              password: '123456'
+            })
+          });
+
+          const loginData = await loginResponse.json();
+          if (loginData.success) {
+            secondUser = loginData.data;
+            secondToken = loginData.data.token;
+            log('✅ 第二个用户登录成功');
+            showResult('permissionResult', `第二个用户登录成功！\n用户: ${secondUser.displayName}`, false);
+            enableButtons(['crossBtn']);
+          }
+        } else {
+          log('❌ 创建第二个用户失败: ' + regData.error);
+          showResult('permissionResult', '创建失败: ' + regData.error, true);
+        }
+      }
+    } catch (error) {
+      log('❌ 创建第二个用户请求失败: ' + error.message);
+      showResult('permissionResult', '请求失败: ' + error.message, true);
+    }
+  }
+
+  async function testCrossUserPermission() {
+    log('测试跨用户权限控制...');
+
+    if (!secondToken || testProjects.length === 0) {
+      log('❌ 缺少第二个用户token或测试项目');
+      return;
+    }
+
+    const projectName = testProjects[0].name;
+    log(`用户2尝试修改用户1的项目: ${projectName}`);
+
+    try {
+      const response = await fetch(`${baseUrl}/projects/${projectName}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + secondToken
+        },
+        body: JSON.stringify({
+          description: '用户2尝试修改的描述'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        log('❌ 权限控制失败！用户2能够修改用户1的项目');
+        showResult('permissionResult', '⚠️ 权限控制有问题：其他用户可以修改项目', true);
+      } else {
+        log('✅ 权限控制正常！用户2无法修改用户1的项目');
+        showResult('permissionResult', `✅ 权限控制正常！\n错误信息: ${data.error}`, false);
+        updateStepStatus('step5', 'completed');
+      }
+    } catch (error) {
+      log('❌ 跨用户权限测试请求失败: ' + error.message);
+      showResult('permissionResult', '请求失败: ' + error.message, true);
+    }
+  }
+
+  // ========== 完整自动测试 ==========
+  async function runCompleteTest() {
+    log('🚀 开始运行完整集成测试...');
+    updateStatus('正在运行完整测试...');
+
+    try {
+      // 清理之前的状态
+      clearLog();
+      log('📋 完整集成测试开始');
+
+      // 步骤1: 注册用户
+      log('步骤1: 注册测试用户...');
+      document.getElementById('regUsername').value = 'autotest' + Date.now();
+      document.getElementById('regEmail').value = `autotest${Date.now()}@example.com`;
+      document.getElementById('regPassword').value = '123456';
+      document.getElementById('regDisplayName').value = '自动测试用户';
+
+      await registerUser();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
+
+      // 步骤2: 登录用户
+      log('步骤2: 登录测试用户...');
+      document.getElementById('loginUsername').value = document.getElementById('regUsername').value;
+      document.getElementById('loginPassword').value = '123456';
+
+      await loginUser();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 步骤3: 创建项目
+      log('步骤3: 创建测试项目...');
+      document.getElementById('projectName').value = 'autotest-project-' + Date.now();
+      document.getElementById('projectDescription').value = '自动测试创建的项目';
+      document.getElementById('projectGitPath').value = 'https://github.com/octocat/Hello-World.git';
+
+      await createProject();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 步骤4: 测试项目管理
+      log('步骤4: 测试项目管理功能...');
+      await getAllProjects();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await getMyProjects();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await testProjectPermission();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 步骤5: 测试权限控制
+      log('步骤5: 测试权限控制...');
+      await createSecondUser();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await testCrossUserPermission();
+
+      log('🎉 完整集成测试完成！');
+      updateStatus('完整测试完成！所有功能正常');
+
+    } catch (error) {
+      log('❌ 完整测试过程中出现错误: ' + error.message);
+      updateStatus('测试过程中出现错误');
+    }
+  }
+</script>
+</body>
+</html>

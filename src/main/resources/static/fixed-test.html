@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>修复版集成测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .section { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { background: #f8f9fa; padding: 10px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔧 修复版集成测试</h1>
+
+    <div id="status" class="section">
+        <h3>📊 当前状态</h3>
+        <div id="statusText">准备开始测试</div>
+        <div id="userInfo" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="section">
+        <h3>🚀 快速测试</h3>
+        <button onclick="quickTest()">一键完整测试</button>
+        <button onclick="testProjectAPI()">测试项目API</button>
+        <button onclick="clearAll()">清空所有数据</button>
+    </div>
+
+    <div class="section">
+        <h3>🔍 分步调试</h3>
+        <button onclick="step1_Register()">1. 注册用户</button>
+        <button onclick="step2_Login()">2. 登录用户</button>
+        <button onclick="step3_CreateProject()">3. 创建项目</button>
+        <button onclick="step4_GetAllProjects()">4. 获取所有项目</button>
+        <button onclick="step5_GetMyProjects()">5. 获取我的项目</button>
+    </div>
+
+    <div class="section">
+        <h3>📋 测试日志</h3>
+        <button onclick="clearLog()">清空日志</button>
+        <div id="log" class="result" style="height: 300px;"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080/api';
+    let currentUser = null;
+    let currentToken = null;
+    let testProject = null;
+
+    function log(message) {
+        const logDiv = document.getElementById('log');
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.textContent += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(message);
+    }
+
+    function clearLog() {
+        document.getElementById('log').textContent = '';
+    }
+
+    function updateStatus(status) {
+        document.getElementById('statusText').textContent = status;
+    }
+
+    function showUserInfo() {
+        const userInfoDiv = document.getElementById('userInfo');
+        if (currentUser) {
+            userInfoDiv.innerHTML = `<strong>已登录:</strong> ${currentUser.displayName} (${currentUser.username}) | Token: ${currentToken}`;
+        } else {
+            userInfoDiv.innerHTML = '';
+        }
+    }
+
+    // 快速完整测试
+    async function quickTest() {
+        clearLog();
+        log('🚀 开始快速完整测试');
+
+        try {
+            const registeredUser = await step1_Register();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const loggedInUser = await step2_Login(registeredUser);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await step3_CreateProject();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await step4_GetAllProjects();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await step5_GetMyProjects();
+
+            log('🎉 快速测试完成！');
+            updateStatus('快速测试完成');
+        } catch (error) {
+            log('❌ 快速测试失败: ' + error.message);
+            updateStatus('快速测试失败');
+        }
+    }
+
+    // 步骤1: 注册用户
+    async function step1_Register() {
+        log('步骤1: 注册用户...');
+
+        const userData = {
+            username: 'fixtest' + Date.now(),
+            email: `fixtest${Date.now()}@example.com`,
+            password: '123456',
+            displayName: '修复测试用户'
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                log('✅ 用户注册成功: ' + userData.username);
+                updateStatus('用户注册成功');
+                return userData; // 返回注册的用户数据
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            log('❌ 用户注册失败: ' + error.message);
+            throw error;
+        }
+    }
+
+    // 步骤2: 登录用户
+    async function step2_Login(registeredUser = null) {
+        log('步骤2: 登录用户...');
+
+        // 使用传入的注册用户信息或默认用户
+        const loginData = {
+            usernameOrEmail: registeredUser ? registeredUser.username : 'testuser1',
+            password: '123456'
+        };
+
+        log(`尝试登录用户: ${loginData.usernameOrEmail}`);
+
+        try {
+            const response = await fetch(`${API_BASE}/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(loginData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                currentUser = data.data;
+                currentToken = data.data.token;
+                localStorage.setItem('userToken', currentToken);
+
+                log('✅ 用户登录成功: ' + currentUser.displayName);
+                log('Token: ' + currentToken);
+                updateStatus('用户登录成功');
+                showUserInfo();
+                return currentUser;
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            log('❌ 用户登录失败: ' + error.message);
+            throw error;
+        }
+    }
+
+    // 步骤3: 创建项目
+    async function step3_CreateProject() {
+        log('步骤3: 创建项目...');
+
+        if (!currentToken) {
+            throw new Error('需要先登录');
+        }
+
+        const projectData = {
+            name: 'fixtest-project-' + Date.now(),
+            description: '修复测试项目',
+            gitPath: 'https://github.com/octocat/Hello-World.git',
+            token: currentToken
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(projectData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                testProject = data.data;
+                log('✅ 项目创建成功: ' + testProject.name);
+                log('创建者ID: ' + testProject.creatorId);
+                updateStatus('项目创建成功');
+                return testProject;
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            log('❌ 项目创建失败: ' + error.message);
+            throw error;
+        }
+    }
+
+    // 步骤4: 获取所有项目
+    async function step4_GetAllProjects() {
+        log('步骤4: 获取所有项目...');
+
+        try {
+            const response = await fetch(`${API_BASE}/projects`);
+            const data = await response.json();
+
+            if (data.success) {
+                log(`✅ 获取所有项目成功，共 ${data.count} 个项目`);
+                data.projects.forEach(project => {
+                    log(`  - ${project.name} (创建者: ${project.creatorId})`);
+                });
+                updateStatus('获取所有项目成功');
+                return data.projects;
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            log('❌ 获取所有项目失败: ' + error.message);
+            throw error;
+        }
+    }
+
+    // 步骤5: 获取我的项目
+    async function step5_GetMyProjects() {
+        log('步骤5: 获取我的项目...');
+
+        if (!currentToken) {
+            throw new Error('需要先登录');
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/projects/my?token=${currentToken}`);
+            const data = await response.json();
+
+            if (data.success) {
+                log(`✅ 获取我的项目成功，共 ${data.count} 个项目`);
+                data.projects.forEach(project => {
+                    log(`  - ${project.name}: ${project.description}`);
+                });
+                updateStatus('获取我的项目成功');
+                return data.projects;
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (error) {
+            log('❌ 获取我的项目失败: ' + error.message);
+            throw error;
+        }
+    }
+
+    // 测试项目API
+    async function testProjectAPI() {
+        log('🔍 测试项目API...');
+
+        try {
+            // 测试获取所有项目
+            log('测试 GET /api/projects');
+            const response = await fetch(`${API_BASE}/projects`);
+            log(`响应状态: ${response.status}`);
+
+            const data = await response.json();
+            log('响应数据: ' + JSON.stringify(data, null, 2));
+
+            if (!data.success) {
+                log('⚠️ API返回失败状态');
+            }
+
+        } catch (error) {
+            log('❌ API测试失败: ' + error.message);
+        }
+    }
+
+    // 清空所有数据
+    async function clearAll() {
+        localStorage.clear();
+        currentUser = null;
+        currentToken = null;
+        testProject = null;
+        updateStatus('所有数据已清空');
+        showUserInfo();
+        log('🧹 所有本地数据已清空');
+    }
+
+    // 页面加载时检查登录状态
+    window.onload = function() {
+        const savedToken = localStorage.getItem('userToken');
+        if (savedToken) {
+            currentToken = savedToken;
+            log('发现保存的token: ' + currentToken);
+        }
+        log('页面加载完成，可以开始测试');
+    };
+</script>
+</body>
+</html>

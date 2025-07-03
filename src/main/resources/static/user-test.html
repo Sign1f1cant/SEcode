@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>用户系统测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #666; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover {
+            background: #218838;
+        }
+
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .user-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .login-status {
+            background: #fff3cd;
+            padding: 10px;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .users-list {
+            margin-top: 20px;
+        }
+        .user-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .user-username {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 16px;
+        }
+        .user-email {
+            color: #666;
+            margin: 5px 0;
+        }
+        .user-role {
+            display: inline-block;
+            background: #17a2b8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+            white-space: pre-wrap;
+            font-family: monospace;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>👤 简化版代码审查系统 - 用户管理</h1>
+
+    <!-- 登录状态显示 -->
+    <div id="loginStatus" class="login-status">
+        <span id="loginStatusText">未登录</span>
+        <button id="logoutBtn" onclick="logout()" class="hidden" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">退出登录</button>
+    </div>
+
+    <!-- 用户注册 -->
+    <div class="section" id="registerSection">
+        <h2>📝 用户注册</h2>
+        <div class="form-group">
+            <label for="regUsername">用户名 *</label>
+            <input type="text" id="regUsername" placeholder="输入用户名">
+        </div>
+        <div class="form-group">
+            <label for="regEmail">邮箱 *</label>
+            <input type="email" id="regEmail" placeholder="输入邮箱地址">
+        </div>
+        <div class="form-group">
+            <label for="regPassword">密码 *</label>
+            <input type="password" id="regPassword" placeholder="输入密码">
+        </div>
+        <div class="form-group">
+            <label for="regDisplayName">显示名称</label>
+            <input type="text" id="regDisplayName" placeholder="输入显示名称（可选）">
+        </div>
+        <button onclick="registerUser()" class="success">注册用户</button>
+    </div>
+
+    <!-- 用户登录 -->
+    <div class="section" id="loginSection">
+        <h2>🔐 用户登录</h2>
+        <div class="form-group">
+            <label for="loginUsername">用户名/邮箱 *</label>
+            <input type="text" id="loginUsername" placeholder="输入用户名或邮箱">
+        </div>
+        <div class="form-group">
+            <label for="loginPassword">密码 *</label>
+            <input type="password" id="loginPassword" placeholder="输入密码">
+        </div>
+        <button onclick="loginUser()" class="success">登录</button>
+    </div>
+
+    <!-- 当前用户信息 -->
+    <div class="section hidden" id="userInfoSection">
+        <h2>👤 当前用户信息</h2>
+        <div id="currentUserInfo" class="user-info"></div>
+        <button onclick="refreshUserInfo()">刷新信息</button>
+    </div>
+
+    <!-- 用户管理 -->
+    <div class="section">
+        <h2>👥 用户管理</h2>
+        <button onclick="getAllUsers()">获取所有用户</button>
+        <div id="usersList" class="users-list"></div>
+    </div>
+
+    <!-- 快速测试 -->
+    <div class="section">
+        <h2>⚡ 快速测试</h2>
+        <button onclick="createTestUser()">创建测试用户</button>
+        <button onclick="loginAsTestUser()">登录测试用户</button>
+        <p style="font-size: 12px; color: #666;">测试用户：testuser / test@example.com / password123</p>
+    </div>
+
+    <!-- 结果显示 -->
+    <div class="section">
+        <h2>📊 操作结果</h2>
+        <button onclick="clearResult()">清空结果</button>
+        <div id="result"></div>
+    </div>
+</div>
+
+<script>
+    const baseUrl = 'http://localhost:8080/api';
+    let currentToken = localStorage.getItem('userToken');
+    let currentUser = null;
+
+    // 页面加载时检查登录状态
+    window.onload = function() {
+        checkLoginStatus();
+        getAllUsers();
+    };
+
+    function showResult(data) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+        resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
+
+    function clearResult() {
+        document.getElementById('result').textContent = '';
+    }
+
+    // 检查登录状态
+    async function checkLoginStatus() {
+        if (currentToken) {
+            try {
+                const response = await fetch(`${baseUrl}/users/me?token=${currentToken}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentUser = data.data;
+                    updateLoginStatus(true);
+                    showCurrentUserInfo();
+                } else {
+                    // token无效，清除
+                    logout();
+                }
+            } catch (error) {
+                logout();
+            }
+        }
+    }
+
+    // 更新登录状态显示
+    function updateLoginStatus(isLoggedIn) {
+        const statusText = document.getElementById('loginStatusText');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const registerSection = document.getElementById('registerSection');
+        const loginSection = document.getElementById('loginSection');
+        const userInfoSection = document.getElementById('userInfoSection');
+
+        if (isLoggedIn && currentUser) {
+            statusText.textContent = `已登录: ${currentUser.displayName} (${currentUser.username})`;
+            logoutBtn.classList.remove('hidden');
+            registerSection.classList.add('hidden');
+            loginSection.classList.add('hidden');
+            userInfoSection.classList.remove('hidden');
+        } else {
+            statusText.textContent = '未登录';
+            logoutBtn.classList.add('hidden');
+            registerSection.classList.remove('hidden');
+            loginSection.classList.remove('hidden');
+            userInfoSection.classList.add('hidden');
+        }
+    }
+
+    // 显示当前用户信息
+    function showCurrentUserInfo() {
+        if (!currentUser) return;
+
+        const userInfoDiv = document.getElementById('currentUserInfo');
+        userInfoDiv.innerHTML = `
+                <div><strong>用户ID:</strong> ${currentUser.id}</div>
+                <div><strong>用户名:</strong> ${currentUser.username}</div>
+                <div><strong>邮箱:</strong> ${currentUser.email}</div>
+                <div><strong>显示名称:</strong> ${currentUser.displayName}</div>
+                <div><strong>角色:</strong> <span class="user-role">${currentUser.roleDescription}</span></div>
+                <div><strong>注册时间:</strong> ${new Date(currentUser.createdAt).toLocaleString()}</div>
+                <div><strong>最后登录:</strong> ${currentUser.lastLogin ? new Date(currentUser.lastLogin).toLocaleString() : '首次登录'}</div>
+                <div><strong>Token:</strong> ${currentToken}</div>
+            `;
+    }
+
+    // 用户注册
+    async function registerUser() {
+        const username = document.getElementById('regUsername').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const displayName = document.getElementById('regDisplayName').value.trim();
+
+        if (!username) {
+            alert('请输入用户名');
+            return;
+        }
+        if (!email) {
+            alert('请输入邮箱');
+            return;
+        }
+        if (!password) {
+            alert('请输入密码');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/users/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    displayName: displayName || username
+                })
+            });
+
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                // 清空表单
+                document.getElementById('regUsername').value = '';
+                document.getElementById('regEmail').value = '';
+                document.getElementById('regPassword').value = '';
+                document.getElementById('regDisplayName').value = '';
+
+                alert('注册成功！请登录');
+                getAllUsers();
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    // 用户登录
+    async function loginUser() {
+        const usernameOrEmail = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!usernameOrEmail) {
+            alert('请输入用户名或邮箱');
+            return;
+        }
+        if (!password) {
+            alert('请输入密码');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/users/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    usernameOrEmail: usernameOrEmail,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                currentToken = data.data.token;
+                currentUser = data.data;
+                localStorage.setItem('userToken', currentToken);
+
+                // 清空表单
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+
+                updateLoginStatus(true);
+                showCurrentUserInfo();
+                alert('登录成功！');
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    // 退出登录
+    function logout() {
+        currentToken = null;
+        currentUser = null;
+        localStorage.removeItem('userToken');
+        updateLoginStatus(false);
+        document.getElementById('currentUserInfo').innerHTML = '';
+    }
+
+    // 刷新用户信息
+    async function refreshUserInfo() {
+        if (!currentToken) {
+            alert('请先登录');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${baseUrl}/users/me?token=${currentToken}`);
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                currentUser = data.data;
+                showCurrentUserInfo();
+            } else {
+                alert('获取用户信息失败，请重新登录');
+                logout();
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    // 获取所有用户
+    async function getAllUsers() {
+        try {
+            const response = await fetch(`${baseUrl}/users`);
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                updateUsersList(data.users || []);
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    // 更新用户列表显示
+    function updateUsersList(users) {
+        const listDiv = document.getElementById('usersList');
+
+        if (!users || users.length === 0) {
+            listDiv.innerHTML = '<p style="color: #666; text-align: center;">暂无用户</p>';
+            return;
+        }
+
+        listDiv.innerHTML = users.map(user => `
+                <div class="user-item">
+                    <div class="user-username">${user.username}</div>
+                    <div class="user-email">📧 ${user.email}</div>
+                    <div style="margin: 5px 0;">
+                        <span>📝 ${user.displayName}</span>
+                        <span class="user-role" style="margin-left: 10px;">${user.roleDescription}</span>
+                        <span style="margin-left: 10px; font-size: 12px; color: ${user.isActive ? '#28a745' : '#dc3545'};">
+                            ${user.isActive ? '✅ 活跃' : '❌ 禁用'}
+                        </span>
+                    </div>
+                    <div style="font-size: 12px; color: #999;">
+                        ID: ${user.id} |
+                        注册: ${new Date(user.createdAt).toLocaleDateString()} |
+                        最后登录: ${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '未登录'}
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    // 创建测试用户
+    async function createTestUser() {
+        try {
+            const response = await fetch(`${baseUrl}/users/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: 'testuser',
+                    email: 'test@example.com',
+                    password: 'password123',
+                    displayName: '测试用户'
+                })
+            });
+
+            const data = await response.json();
+            showResult(data);
+
+            if (data.success) {
+                alert('测试用户创建成功！');
+                getAllUsers();
+            } else {
+                alert('创建失败：' + data.error);
+            }
+        } catch (error) {
+            showResult({error: error.message});
+        }
+    }
+
+    // 登录测试用户
+    async function loginAsTestUser() {
+        document.getElementById('loginUsername').value = 'testuser';
+        document.getElementById('loginPassword').value = 'password123';
+        await loginUser();
+    }
+</script>
+</body>
+</html>

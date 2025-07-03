@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>用户系统简化测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { border: 1px solid #ccc; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        input { width: 200px; padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+<h1>🧪 用户系统测试</h1>
+
+<!-- 基础测试 -->
+<div class="section">
+    <h3>📡 基础连接测试</h3>
+    <button onclick="testBasicConnection()">测试基础连接</button>
+    <button onclick="testUserEndpoint()">测试用户端点</button>
+    <div id="connectionResult" class="result"></div>
+</div>
+
+<!-- 用户注册测试 -->
+<div class="section">
+    <h3>📝 用户注册测试</h3>
+    <div>
+        <input type="text" id="regUser" placeholder="用户名" value="testuser">
+        <input type="email" id="regEmail" placeholder="邮箱" value="test@example.com">
+        <input type="password" id="regPass" placeholder="密码" value="123456">
+        <input type="text" id="regDisplay" placeholder="显示名称" value="测试用户">
+    </div>
+    <button onclick="testRegister()">注册用户</button>
+    <div id="registerResult" class="result"></div>
+</div>
+
+<!-- 用户登录测试 -->
+<div class="section">
+    <h3>🔐 用户登录测试</h3>
+    <div>
+        <input type="text" id="loginUser" placeholder="用户名/邮箱" value="testuser">
+        <input type="password" id="loginPass" placeholder="密码" value="123456">
+    </div>
+    <button onclick="testLogin()">登录测试</button>
+    <div id="loginResult" class="result"></div>
+</div>
+
+<!-- 数据库检查 -->
+<div class="section">
+    <h3>🗄️ 数据库检查</h3>
+    <button onclick="checkDatabase()">检查H2数据库</button>
+    <button onclick="showInstructions()">显示H2连接说明</button>
+    <div id="dbResult" class="result"></div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080/api';
+
+    // 显示结果的辅助函数
+    function showResult(elementId, data, isError = false) {
+        const element = document.getElementById(elementId);
+        element.className = 'result ' + (isError ? 'error' : 'success');
+        element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    // 测试基础连接
+    async function testBasicConnection() {
+        try {
+            const response = await fetch(`${API_BASE}/test/hello`);
+            const data = await response.json();
+            showResult('connectionResult', `✅ 基础连接成功\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+            showResult('connectionResult', `❌ 连接失败: ${error.message}`, true);
+        }
+    }
+
+    // 测试用户端点
+    async function testUserEndpoint() {
+        try {
+            const response = await fetch(`${API_BASE}/users`);
+            const data = await response.json();
+            showResult('connectionResult', `✅ 用户端点连接成功\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+            showResult('connectionResult', `❌ 用户端点连接失败: ${error.message}\n\n可能原因:\n1. UserController未创建\n2. 服务器未启动\n3. 端口不正确`, true);
+        }
+    }
+
+    // 测试用户注册
+    async function testRegister() {
+        const userData = {
+            username: document.getElementById('regUser').value,
+            email: document.getElementById('regEmail').value,
+            password: document.getElementById('regPass').value,
+            displayName: document.getElementById('regDisplay').value
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/users/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showResult('registerResult', `✅ 注册成功!\n${JSON.stringify(data, null, 2)}`);
+            } else {
+                showResult('registerResult', `❌ 注册失败\n状态码: ${response.status}\n错误: ${data.error || '未知错误'}`, true);
+            }
+        } catch (error) {
+            showResult('registerResult', `❌ 注册请求失败: ${error.message}`, true);
+        }
+    }
+
+    // 测试用户登录
+    async function testLogin() {
+        const loginData = {
+            usernameOrEmail: document.getElementById('loginUser').value,
+            password: document.getElementById('loginPass').value
+        };
+
+        try {
+            const response = await fetch(`${API_BASE}/users/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(loginData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showResult('loginResult', `✅ 登录成功!\nToken: ${data.data.token}\n用户信息: ${JSON.stringify(data.data, null, 2)}`);
+
+                // 保存token并测试
+                localStorage.setItem('userToken', data.data.token);
+                testCurrentUser();
+            } else {
+                showResult('loginResult', `❌ 登录失败\n状态码: ${response.status}\n错误: ${data.error || '未知错误'}\n\n请检查:\n1. 用户是否已注册\n2. 用户名/密码是否正确\n3. 数据库连接是否正常`, true);
+            }
+        } catch (error) {
+            showResult('loginResult', `❌ 登录请求失败: ${error.message}`, true);
+        }
+    }
+
+    // 测试当前用户信息
+    async function testCurrentUser() {
+        const token = localStorage.getItem('userToken');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/users/me?token=${token}`);
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showResult('loginResult',
+                    document.getElementById('loginResult').textContent +
+                    `\n\n✅ Token验证成功!\n当前用户: ${JSON.stringify(data.data, null, 2)}`);
+            }
+        } catch (error) {
+            console.log('Token验证失败:', error);
+        }
+    }
+
+    // 检查数据库
+    function checkDatabase() {
+        showResult('dbResult', `🔍 请手动检查H2数据库:\n\n1. 访问: http://localhost:8080/h2-console\n2. 连接信息:\n   JDBC URL: jdbc:h2:mem:codereview\n   User Name: sa\n   Password: (留空)\n\n3. 查看是否有 USERS 表\n4. 查看表中是否有数据\n\n如果没有USERS表，说明User实体未正确配置`);
+    }
+
+    // 显示H2连接说明
+    function showInstructions() {
+        showResult('dbResult', `📋 完整测试流程:\n\n1. 先点击"测试用户端点"确保API正常\n2. 如果API正常，点击"注册用户"\n3. 注册成功后，点击"登录测试"\n4. 如果登录失败，检查H2数据库中的数据\n\n常见问题:\n• API端点404 -> UserController未创建或扫描\n• 注册失败 -> User实体或数据库问题\n• 登录失败 -> 密码验证或数据查询问题`);
+    }
+
+    // 页面加载时自动测试连接
+    window.onload = function() {
+        testBasicConnection();
+    };
+</script>
+</body>
+</html>

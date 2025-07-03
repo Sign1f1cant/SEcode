@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Diff Viewer - Simple Code Review</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #e6edf3;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #21262d 0%, #30363d 100%);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #f0f6fc;
+            font-size: 2em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header .subtitle {
+            color: #7d8590;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-group label {
+            color: #f0f6fc;
+            font-weight: 600;
+            min-width: 80px;
+        }
+
+        .form-group input, .form-group select {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e6edf3;
+            padding: 8px 12px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #1f6feb;
+            box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.1);
+        }
+
+        .btn {
+            background: #238636;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-right: 8px;
+        }
+
+        .btn:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+
+        .btn.btn-secondary {
+            background: #21262d;
+            border: 1px solid #30363d;
+        }
+
+        .btn.btn-secondary:hover {
+            background: #30363d;
+        }
+
+        .diff-stats {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: #21262d;
+            border-radius: 6px;
+        }
+
+        .stat-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #f0f6fc;
+        }
+
+        .stat-label {
+            color: #7d8590;
+            font-size: 0.9em;
+            margin-top: 4px;
+        }
+
+        .diff-summary {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .additions {
+            color: #238636;
+            font-weight: 600;
+        }
+
+        .deletions {
+            color: #da3633;
+            font-weight: 600;
+        }
+
+        .file-list {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-item {
+            border-bottom: 1px solid #21262d;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .file-item:hover {
+            background: #161b22;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .file-name {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            color: #e6edf3;
+        }
+
+        .file-stats {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .file-status {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .file-status.added { background: #238636; color: white; }
+        .file-status.deleted { background: #da3633; color: white; }
+        .file-status.modified { background: #1f6feb; color: white; }
+        .file-status.renamed { background: #a570ff; color: white; }
+
+        .diff-container {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .diff-file-header {
+            background: #21262d;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .diff-file-name {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+
+        .diff-file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .diff-content {
+            overflow-x: auto;
+        }
+
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .diff-line {
+            border: none;
+        }
+
+        .diff-line-number {
+            width: 50px;
+            padding: 0 8px;
+            text-align: right;
+            color: #7d8590;
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            user-select: none;
+            vertical-align: top;
+        }
+
+        .diff-line-content {
+            padding: 0 8px;
+            white-space: pre;
+            vertical-align: top;
+        }
+
+        .diff-line-context {
+            background: #0d1117;
+        }
+
+        .diff-line-added {
+            background: rgba(35, 134, 54, 0.15);
+        }
+
+        .diff-line-added .diff-line-content {
+            background: rgba(35, 134, 54, 0.15);
+        }
+
+        .diff-line-deleted {
+            background: rgba(218, 54, 51, 0.15);
+        }
+
+        .diff-line-deleted .diff-line-content {
+            background: rgba(218, 54, 51, 0.15);
+        }
+
+        .diff-line-header {
+            background: #1f2937;
+            color: #9ca3af;
+            font-weight: 600;
+        }
+
+        .diff-line-header .diff-line-content {
+            background: #1f2937;
+        }
+
+        .diff-line-number.added {
+            background: rgba(35, 134, 54, 0.15);
+        }
+
+        .diff-line-number.deleted {
+            background: rgba(218, 54, 51, 0.15);
+        }
+
+        .diff-line-number.header {
+            background: #1f2937;
+        }
+
+        .line-comment-indicator {
+            width: 20px;
+            text-align: center;
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            cursor: pointer;
+            color: #7d8590;
+        }
+
+        .line-comment-indicator:hover {
+            background: #21262d;
+            color: #e6edf3;
+        }
+
+        .line-comment-indicator.has-comment {
+            background: #1f6feb;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7d8590;
+        }
+
+        .loading .spinner {
+            border: 3px solid #21262d;
+            border-top: 3px solid #1f6feb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #da3633;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .success-message {
+            background: #238636;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .file-tree {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .tree-item {
+            padding: 4px 0;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .tree-item:hover {
+            background: #21262d;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin: 0 -8px;
+        }
+
+        .tree-folder {
+            color: #58a6ff;
+            font-weight: 600;
+        }
+
+        .tree-file {
+            color: #e6edf3;
+            margin-left: 16px;
+        }
+
+        .view-mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .view-mode-btn {
+            padding: 6px 12px;
+            border: 1px solid #30363d;
+            background: #21262d;
+            color: #e6edf3;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .view-mode-btn.active {
+            background: #1f6feb;
+            border-color: #1f6feb;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .form-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-group input, .form-group select {
+                min-width: auto;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .diff-table {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>
+            <span>📄</span>
+            代码差异查看器
+        </h1>
+        <div class="subtitle">可视化代码变更，支持行级评论和语法高亮</div>
+    </div>
+
+    <div class="controls">
+        <div class="form-group">
+            <label>变更ID:</label>
+            <input type="text" id="changeId" placeholder="输入变更ID">
+            <button class="btn" onclick="loadChangeDiff()">加载变更差异</button>
+        </div>
+
+        <div class="form-group">
+            <label>或者:</label>
+            <input type="text" id="projectName" placeholder="项目名称" value="demo-project">
+            <input type="text" id="commitId" placeholder="提交ID">
+            <button class="btn btn-secondary" onclick="loadCommitDiff()">加载提交差异</button>
+        </div>
+
+        <div class="form-group">
+            <button class="btn btn-secondary" onclick="loadMockData()">加载示例数据</button>
+            <button class="btn btn-secondary" onclick="clearDiff()">清除显示</button>
+        </div>
+    </div>
+
+    <div class="view-mode-selector hidden" id="viewModeSelector">
+        <button class="view-mode-btn active" onclick="setViewMode('unified')">统一视图</button>
+        <button class="view-mode-btn" onclick="setViewMode('split')">分割视图</button>
+        <button class="view-mode-btn" onclick="setViewMode('tree')">文件树</button>
+    </div>
+
+    <div class="diff-stats hidden" id="diffStats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number" id="totalFiles">0</div>
+                <div class="stat-label">变更文件</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number additions" id="totalAdditions">0</div>
+                <div class="stat-label">新增行数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number deletions" id="totalDeletions">0</div>
+                <div class="stat-label">删除行数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="netChanges">0</div>
+                <div class="stat-label">净变更</div>
+            </div>
+        </div>
+        <div class="diff-summary">
+            <span>📊 差异摘要:</span>
+            <span class="additions" id="additionsSummary">+0</span>
+            <span class="deletions" id="deletionsSummary">-0</span>
+            <span id="filesSummary">0 个文件</span>
+        </div>
+    </div>
+
+    <div class="file-tree hidden" id="fileTree">
+        <h3 style="margin-bottom: 12px; color: #f0f6fc;">📁 文件结构</h3>
+        <div id="fileTreeContent"></div>
+    </div>
+
+    <div class="file-list hidden" id="fileList">
+        <div style="padding: 12px 16px; background: #21262d; border-bottom: 1px solid #30363d; font-weight: 600; color: #f0f6fc;">
+            📄 变更文件列表
+        </div>
+        <div id="fileListContent"></div>
+    </div>
+
+    <div id="diffContainer"></div>
+
+    <div class="loading hidden" id="loading">
+        <div class="spinner"></div>
+        <div>正在加载差异数据...</div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080/api';
+    let currentDiffData = null;
+    let currentViewMode = 'unified';
+
+    function showLoading() {
+        document.getElementById('loading').classList.remove('hidden');
+        hideDiffViews();
+    }
+
+    function hideLoading() {
+        document.getElementById('loading').classList.add('hidden');
+    }
+
+    function hideDiffViews() {
+        document.getElementById('diffStats').classList.add('hidden');
+        document.getElementById('fileList').classList.add('hidden');
+        document.getElementById('fileTree').classList.add('hidden');
+        document.getElementById('diffContainer').innerHTML = '';
+        document.getElementById('viewModeSelector').classList.add('hidden');
+    }
+
+    function showError(message) {
+        hideLoading();
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = '❌ ' + message;
+
+        // 移除旧的错误消息
+        const oldError = document.querySelector('.error-message');
+        if (oldError) oldError.remove();
+
+        document.querySelector('.controls').after(errorDiv);
+
+        // 5秒后自动移除
+        setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    function showSuccess(message) {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success-message';
+        successDiv.textContent = '✅ ' + message;
+
+        // 移除旧的成功消息
+        const oldSuccess = document.querySelector('.success-message');
+        if (oldSuccess) oldSuccess.remove();
+
+        document.querySelector('.controls').after(successDiv);
+
+        // 3秒后自动移除
+        setTimeout(() => successDiv.remove(), 3000);
+    }
+
+    async function loadChangeDiff() {
+        const changeId = document.getElementById('changeId').value.trim();
+
+        if (!changeId) {
+            showError('请输入变更ID');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch(`${API_BASE}/diff/change/${changeId}`);
+            const result = await response.json();
+
+            if (result.success) {
+                currentDiffData = result.data;
+                displayDiff(currentDiffData);
+                showSuccess('差异数据加载成功');
+            } else {
+                showError(result.error || '加载差异失败');
+            }
+        } catch (error) {
+            showError('网络错误: ' + error.message);
+        }
+
+        hideLoading();
+    }
+
+    async function loadCommitDiff() {
+        const projectName = document.getElementById('projectName').value.trim();
+        const commitId = document.getElementById('commitId').value.trim();
+
+        if (!projectName || !commitId) {
+            showError('请输入项目名称和提交ID');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch(`${API_BASE}/diff/project/${projectName}/commit/${commitId}`);
+            const result = await response.json();
+
+            if (result.success) {
+                currentDiffData = result.data;
+                displayDiff(currentDiffData);
+                showSuccess('差异数据加载成功');
+            } else {
+                showError(result.error || '加载差异失败');
+            }
+        } catch (error) {
+            showError('网络错误: ' + error.message);
+        }
+
+        hideLoading();
+    }
+
+    function loadMockData() {
+        showLoading();
+
+        // 模拟API调用延迟
+        setTimeout(() => {
+            const mockData = generateMockDiffData();
+            currentDiffData = mockData;
+            displayDiff(mockData);
+            showSuccess('示例数据加载成功');
+            hideLoading();
+        }, 1000);
+    }
+
+    function generateMockDiffData() {
+        return {
+            projectName: "demo-project",
+            commitId: "abc123456",
+            subject: "添加用户验证功能",
+            author: "开发者",
+            commitMessage: "添加用户登录验证和权限检查功能\n\n- 实现用户认证逻辑\n- 添加权限验证中间件\n- 完善错误处理",
+            stats: {
+                totalFiles: 3,
+                totalAdditions: 45,
+                totalDeletions: 12,
+                addedFiles: 1,
+                deletedFiles: 0,
+                modifiedFiles: 2
+            },
+            files: [
+                {
+                    fileName: "src/main/java/com/example/UserService.java",
+                    fileStatus: "MODIFIED",
+                    addedLines: 15,
+                    deletedLines: 5,
+                    lines: [
+                        { type: "HEADER", content: "@@ -10,6 +10,8 @@ public class UserService {", oldLineNumber: null, newLineNumber: null, cssClass: "diff-line-header" },
+                        { type: "CONTEXT", content: "public class UserService {", oldLineNumber: 10, newLineNumber: 10, cssClass: "diff-line-context" },
+                        { type: "CONTEXT", content: "    private UserRepository userRepository;", oldLineNumber: 11, newLineNumber: 11, cssClass: "diff-line-context" },
+                        { type: "ADDED", content: "    private PasswordEncoder passwordEncoder;", oldLineNumber: null, newLineNumber: 12, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "", oldLineNumber: null, newLineNumber: 13, cssClass: "diff-line-added" },
+                        { type: "CONTEXT", content: "", oldLineNumber: 12, newLineNumber: 14, cssClass: "diff-line-context" },
+                        { type: "CONTEXT", content: "    public User findById(Long id) {", oldLineNumber: 13, newLineNumber: 15, cssClass: "diff-line-context" },
+                        { type: "DELETED", content: "        return userRepository.findById(id);", oldLineNumber: 14, newLineNumber: null, cssClass: "diff-line-deleted" },
+                        { type: "ADDED", content: "        if (id == null) {", oldLineNumber: null, newLineNumber: 16, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "            throw new IllegalArgumentException(\"ID不能为空\");", oldLineNumber: null, newLineNumber: 17, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "        }", oldLineNumber: null, newLineNumber: 18, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "        return userRepository.findById(id).orElse(null);", oldLineNumber: null, newLineNumber: 19, cssClass: "diff-line-added" },
+                        { type: "CONTEXT", content: "    }", oldLineNumber: 15, newLineNumber: 20, cssClass: "diff-line-context" }
+                    ]
+                },
+                {
+                    fileName: "src/main/java/com/example/AuthController.java",
+                    fileStatus: "MODIFIED",
+                    addedLines: 25,
+                    deletedLines: 7,
+                    lines: [
+                        { type: "HEADER", content: "@@ -1,5 +1,7 @@", oldLineNumber: null, newLineNumber: null, cssClass: "diff-line-header" },
+                        { type: "CONTEXT", content: "package com.example;", oldLineNumber: 1, newLineNumber: 1, cssClass: "diff-line-context" },
+                        { type: "CONTEXT", content: "", oldLineNumber: 2, newLineNumber: 2, cssClass: "diff-line-context" },
+                        { type: "ADDED", content: "import org.springframework.security.crypto.password.PasswordEncoder;", oldLineNumber: null, newLineNumber: 3, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "import org.springframework.http.ResponseEntity;", oldLineNumber: null, newLineNumber: 4, cssClass: "diff-line-added" },
+                        { type: "CONTEXT", content: "import org.springframework.web.bind.annotation.*;", oldLineNumber: 3, newLineNumber: 5, cssClass: "diff-line-context" }
+                    ]
+                },
+                {
+                    fileName: "src/main/java/com/example/ValidationUtils.java",
+                    fileStatus: "ADDED",
+                    addedLines: 15,
+                    deletedLines: 0,
+                    lines: [
+                        { type: "ADDED", content: "package com.example;", oldLineNumber: null, newLineNumber: 1, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "", oldLineNumber: null, newLineNumber: 2, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "public class ValidationUtils {", oldLineNumber: null, newLineNumber: 3, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "    public static boolean isValidId(Long id) {", oldLineNumber: null, newLineNumber: 4, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "        return id != null && id > 0;", oldLineNumber: null, newLineNumber: 5, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "    }", oldLineNumber: null, newLineNumber: 6, cssClass: "diff-line-added" },
+                        { type: "ADDED", content: "}", oldLineNumber: null, newLineNumber: 7, cssClass: "diff-line-added" }
+                    ]
+                }
+            ],
+            isMockData: true
+        };
+    }
+
+    function displayDiff(diffData) {
+        updateStats(diffData.stats);
+        updateFileList(diffData.files);
+        updateFileTree(diffData.files);
+        renderDiffFiles(diffData.files);
+
+        document.getElementById('viewModeSelector').classList.remove('hidden');
+        document.getElementById('diffStats').classList.remove('hidden');
+
+        if (currentViewMode === 'tree') {
+            document.getElementById('fileTree').classList.remove('hidden');
+        } else {
+            document.getElementById('fileList').classList.remove('hidden');
+        }
+    }
+
+    function updateStats(stats) {
+        document.getElementById('totalFiles').textContent = stats.totalFiles;
+        document.getElementById('totalAdditions').textContent = stats.totalAdditions;
+        document.getElementById('totalDeletions').textContent = stats.totalDeletions;
+        document.getElementById('netChanges').textContent = stats.totalAdditions - stats.totalDeletions;
+
+        document.getElementById('additionsSummary').textContent = `+${stats.totalAdditions}`;
+        document.getElementById('deletionsSummary').textContent = `-${stats.totalDeletions}`;
+        document.getElementById('filesSummary').textContent = `${stats.totalFiles} 个文件`;
+    }
+
+    function updateFileList(files) {
+        const listContent = document.getElementById('fileListContent');
+        listContent.innerHTML = '';
+
+        files.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.onclick = () => scrollToFile(file.fileName);
+
+            fileItem.innerHTML = `
+                    <div class="file-icon">${getFileIcon(file.fileName)}</div>
+                    <div class="file-name">${file.fileName}</div>
+                    <div class="file-stats">
+                        <span class="file-status ${file.fileStatus.toLowerCase()}">${getFileStatusText(file.fileStatus)}</span>
+                        ${file.addedLines > 0 ? `<span class="additions">+${file.addedLines}</span>` : ''}
+                        ${file.deletedLines > 0 ? `<span class="deletions">-${file.deletedLines}</span>` : ''}
+                    </div>
+                `;
+
+            listContent.appendChild(fileItem);
+        });
+    }
+
+    function updateFileTree(files) {
+        const treeContent = document.getElementById('fileTreeContent');
+        treeContent.innerHTML = '';
+
+        const fileTree = buildFileTree(files);
+        renderFileTree(fileTree, treeContent);
+    }
+
+    function buildFileTree(files) {
+        const tree = {};
+
+        files.forEach(file => {
+            const parts = file.fileName.split('/');
+            let current = tree;
+
+            parts.forEach((part, index) => {
+                if (!current[part]) {
+                    current[part] = {
+                        isFile: index === parts.length - 1,
+                        children: {},
+                        fileData: index === parts.length - 1 ? file : null
+                    };
+                }
+                current = current[part].children;
+            });
+        });
+
+        return tree;
+    }
+
+    function renderFileTree(tree, container, depth = 0) {
+        Object.keys(tree).sort().forEach(key => {
+            const node = tree[key];
+            const item = document.createElement('div');
+            item.className = 'tree-item';
+            item.style.marginLeft = `${depth * 16}px`;
+
+            if (node.isFile) {
+                item.className += ' tree-file';
+                item.onclick = () => scrollToFile(node.fileData.fileName);
+                item.innerHTML = `${getFileIcon(key)} ${key}`;
+            } else {
+                item.className += ' tree-folder';
+                item.innerHTML = `📁 ${key}`;
+            }
+
+            container.appendChild(item);
+
+            if (!node.isFile) {
+                renderFileTree(node.children, container, depth + 1);
+            }
+        });
+    }
+
+    function renderDiffFiles(files) {
+        const container = document.getElementById('diffContainer');
+        container.innerHTML = '';
+
+        files.forEach(file => {
+            const diffDiv = document.createElement('div');
+            diffDiv.className = 'diff-container';
+            diffDiv.id = `file-${file.fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            // 文件头部
+            const header = document.createElement('div');
+            header.className = 'diff-file-header';
+            header.innerHTML = `
+                    <div class="diff-file-name">
+                        ${getFileIcon(file.fileName)} ${file.fileName}
+                        <span class="file-status ${file.fileStatus.toLowerCase()}" style="margin-left: 8px;">${getFileStatusText(file.fileStatus)}</span>
+                    </div>
+                    <div class="diff-file-actions">
+                        <span class="additions">+${file.addedLines}</span>
+                        <span class="deletions">-${file.deletedLines}</span>
+                    </div>
+                `;
+
+            diffDiv.appendChild(header);
+
+            // 差异内容
+            if (file.lines && file.lines.length > 0) {
+                const diffContent = document.createElement('div');
+                diffContent.className = 'diff-content';
+
+                const table = document.createElement('table');
+                table.className = 'diff-table';
+
+                file.lines.forEach((line, index) => {
+                    const row = document.createElement('tr');
+                    row.className = `diff-line ${line.cssClass}`;
+
+                    // 评论指示器
+                    const commentCell = document.createElement('td');
+                    commentCell.className = 'line-comment-indicator';
+                    commentCell.innerHTML = '💬';
+                    commentCell.onclick = () => addLineComment(file.fileName, line);
+
+                    // 旧行号
+                    const oldLineCell = document.createElement('td');
+                    oldLineCell.className = `diff-line-number ${line.type.toLowerCase()}`;
+                    oldLineCell.textContent = line.oldLineNumber || '';
+
+                    // 新行号
+                    const newLineCell = document.createElement('td');
+                    newLineCell.className = `diff-line-number ${line.type.toLowerCase()}`;
+                    newLineCell.textContent = line.newLineNumber || '';
+
+                    // 内容
+                    const contentCell = document.createElement('td');
+                    contentCell.className = 'diff-line-content';
+                    contentCell.textContent = line.content;
+
+                    row.appendChild(commentCell);
+                    row.appendChild(oldLineCell);
+                    row.appendChild(newLineCell);
+                    row.appendChild(contentCell);
+
+                    table.appendChild(row);
+                });
+
+                diffContent.appendChild(table);
+                diffDiv.appendChild(diffContent);
+            } else {
+                const emptyContent = document.createElement('div');
+                emptyContent.style.padding = '20px';
+                emptyContent.style.textAlign = 'center';
+                emptyContent.style.color = '#7d8590';
+                emptyContent.textContent = '无差异内容显示';
+                diffDiv.appendChild(emptyContent);
+            }
+
+            container.appendChild(diffDiv);
+        });
+
+        // 显示差异容器
+        container.style.display = 'block';
+    }
+
+    function getFileIcon(fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+
+        const iconMap = {
+            'java': '☕',
+            'js': '🟨',
+            'ts': '🔷',
+            'py': '🐍',
+            'cpp': '⚡',
+            'c': '⚡',
+            'html': '🌐',
+            'css': '🎨',
+            'json': '📋',
+            'xml': '📄',
+            'md': '📝',
+            'txt': '📄',
+            'yml': '⚙️',
+            'yaml': '⚙️',
+            'sql': '🗃️',
+            'sh': '🖥️'
+        };
+
+        return iconMap[extension] || '📄';
+    }
+
+    function getFileStatusText(status) {
+        const statusMap = {
+            'ADDED': '新增',
+            'DELETED': '删除',
+            'MODIFIED': '修改',
+            'RENAMED': '重命名'
+        };
+        return statusMap[status] || status;
+    }
+
+    function scrollToFile(fileName) {
+        const elementId = `file-${fileName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // 高亮显示
+            element.style.border = '2px solid #1f6feb';
+            setTimeout(() => {
+                element.style.border = '1px solid #30363d';
+            }, 2000);
+        }
+    }
+
+    function addLineComment(fileName, line) {
+        const comment = prompt(`为文件 ${fileName} 的第 ${line.newLineNumber || line.oldLineNumber} 行添加评论:`);
+        if (comment) {
+            alert(`评论已添加: ${comment}\n\n这里可以集成实际的评论系统API。`);
+        }
+    }
+
+    function setViewMode(mode) {
+        currentViewMode = mode;
+
+        // 更新按钮状态
+        document.querySelectorAll('.view-mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // 切换视图
+        const fileList = document.getElementById('fileList');
+        const fileTree = document.getElementById('fileTree');
+
+        if (mode === 'tree') {
+            fileList.classList.add('hidden');
+            fileTree.classList.remove('hidden');
+        } else {
+            fileTree.classList.add('hidden');
+            fileList.classList.remove('hidden');
+        }
+
+        if (mode === 'split') {
+            // 分割视图的实现可以在这里添加
+            showSuccess('分割视图功能开发中...');
+        }
+    }
+
+    function clearDiff() {
+        currentDiffData = null;
+        hideDiffViews();
+
+        // 清除输入框
+        document.getElementById('changeId').value = '';
+        document.getElementById('commitId').value = '';
+
+        // 移除消息
+        document.querySelectorAll('.error-message, .success-message').forEach(msg => msg.remove());
+
+        showSuccess('差异显示已清除');
+    }
+
+    // 键盘快捷键
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'l':
+                    e.preventDefault();
+                    document.getElementById('changeId').focus();
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    if (currentDiffData) {
+                        displayDiff(currentDiffData);
+                    }
+                    break;
+                case 'k':
+                    e.preventDefault();
+                    clearDiff();
+                    break;
+            }
+        }
+    });
+
+    // 页面加载完成后的初始化
+    window.onload = function() {
+        console.log('代码差异查看器已加载');
+        console.log('快捷键: Ctrl+L(聚焦输入), Ctrl+R(刷新), Ctrl+K(清除)');
+
+        // 设置示例数据
+        document.getElementById('changeId').placeholder = '例如: CR_20250702_001';
+        document.getElementById('commitId').placeholder = '例如: abc123456';
+    };
+</script>
+</body>
+</html>
